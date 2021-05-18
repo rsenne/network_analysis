@@ -9,51 +9,65 @@ import pandas as pd
 import numpy as np
 import scipy.special as sc
 import plotly.graph_objects as go
+import seaborn as sns
+import matplotlib.pyplot as plt
 
+# THIS IS FOR TEST PURPOSES ONLY
 file = '/home/ryansenne/The_Ramirez_Group/Cell_Counts.csv'
 
 
 # simple function for loading our csv file
 def loadData(data):
     data = pd.read_csv(data)
-    node_names = data.columns.to_list()
-    node_number = list(item for item in range(0, len(node_names)))
-    nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
+    node_names = data.columns.to_list()  # these are the names of our nodes, we need these for later
+    node_number = list(item for item in range(0, len(node_names)))  # find node number
+    nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}  # ordered list of nodes
     return data, nodes
 
 
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
 def corrMatrix(data):
-    r = np.corrcoef(data, rowvar=False)
-    rf = r[np.triu_indices(r.shape[0], 1)]
-    df = data.shape[1] - 2
-    ts = rf * rf * (df / (1 - rf * rf))
-    pf = sc.betainc(0.5 * df, 0.5, df / (df + ts))
-    p = np.zeros(shape=r.shape)
+    rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
+    rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
+    df = data.shape[1] - 2  # calculate degrees of freedom
+    ts = rf * rf * (df / (1 - rf * rf))  # calculate t's
+    pf = sc.betainc(0.5 * df, 0.5, df / (df + ts))  # calculate p's from beta incomplete function
+    # generate p-value matrix
+    p = np.zeros(shape=rVal.shape)
     p[np.triu_indices(p.shape[0], 1)] = pf
     p[np.tril_indices(p.shape[0], -1)] = p.T[np.tril_indices(p.shape[0], -1)]
     p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
-    return r, p
+    return rVal, p
 
 
 # using this function we will threshold based off of p-values previously calculated
-def significanceCheck(p, corr, alpha):
-    p = np.where((p >= alpha), 0, p)
-    p = np.where((p != 0), 1, p)
-    thresholded_matrix = np.multiply(corr, p)
-    return thresholded_matrix
+def significanceCheck(p, corr, alpha, threshold=0.0, plot=False):
+    p = np.where((p >= alpha), 0, p)  # if not significant --> zero
+    p = np.where((p != 0), 1, p)  # if significant --> one
+    threshold_matrix = np.multiply(corr, p)  # remove any insignificant correlations
+    # remove correlations below threshold
+    threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
+    # create a heatmap of correlations if wanted
+    if plot:
+        sns.heatmap(threshold_matrix, cmap="coolwarm")
+        plt.show()
+    return threshold_matrix
 
 
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data, nodeLabel):
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)
-    graph = nx.relabel_nodes(graph, nodeLabel)
-    pos = nx.circular_layout(graph)
-    nx.set_node_attributes(graph, pos, name='pos')
+    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # create network from a thresholded matrix
+    remove = [node for node, degree in dict(graph.degree()).items() if degree == 0]  # find nodes with zero degree
+    graph.remove_nodes_from(remove)  # remove all nodes of zero degree
+    graph = nx.relabel_nodes(graph, nodeLabel)  # add the names of our nodes from loadData()
+    pos = nx.circular_layout(graph)  # change the shape of our graph for plotting, this is arbitrary
+    nx.set_node_attributes(graph, pos, name='pos')  # add position data for plotting
     return graph, pos
 
 
+# this code is taken near-verbatim from the plotly example, I intend to rework the color schemes, but hey, why rebuild
+# the wheel?
 def graphingNetwork(G):
     global degree_list
     names = []
@@ -104,7 +118,6 @@ def graphingNetwork(G):
                 title='Node Connections',
                 xanchor='left',
                 titleside='right',
-
             ),
             line_width=2))
     node_adjacencies = []
@@ -130,35 +143,36 @@ def graphingNetwork(G):
 
 
 # this is the disruption propagation model from Vetere et al. 2018
-def disruptPropagate(G, target):
-    G = pd.DataFrame(G)
-    # keep track of negative weights
+def disruptPropagate(G, target, nodeNames):
+    G = pd.DataFrame(G, index=list(nodeNames.values()), columns=list(nodeNames.values()))  # create df with node names
+    # keep track of negative weights, create a "negs" matrix that encodes where negative correlations were in the
+    # correlation matrix
     Negs = G
     Negs = np.where((Negs < 0), -1, Negs)
     Negs = np.where((Negs > 0), 1, Negs)
     # keep track of edge updates
     Update = np.ones(G.shape)
-    # Update = np.ones(G.shape)
     np.fill_diagonal(Update, 0)
     # make a copy of the matrix
     G_0 = abs(G.copy())
     # remove edges on target node
     G.loc[target, :] = 0
     G.loc[:, target] = 0
-    deltaEdge = pd.DataFrame(G_0 - G)
+    deltaEdge = pd.DataFrame(G_0 - G)  # edge change df
     Update = np.where((deltaEdge > 0), 0, Update)
-    iterG = [G_0, G]
+    iterG = [G_0, G]  # list that stores iterations of disrupt propagate model
     while True:
-        xGraph = iterG[-1]
-        yGraph = deltaEdge.tail(len(deltaEdge))
+        xGraph = iterG[-1]  # arbitrary variable that stores the latest iteration of the model
+        yGraph = deltaEdge.tail(len(deltaEdge))  # arbitrary variable that stores the latest entry in the deltaEdge df
         # calculate edge weights
         deltaEdge_sum = yGraph.sum()
+        deltaEdge_sum = deltaEdge_sum.to_numpy()
         edgeWeights = np.add.outer(deltaEdge_sum, deltaEdge_sum)
         # calculate node weights
         nodeWeights = xGraph.sum()
+        nodeWeights = nodeWeights.to_numpy()
         nodeWeights = np.add.outer(nodeWeights, nodeWeights)
         nodeWeights = nodeWeights - (2 * xGraph)
-        # print('Hello World')
         # update edge weights
         UpdateMult = Update
         UpdateMult = np.where((Update > 1), 1, UpdateMult)
@@ -168,9 +182,6 @@ def disruptPropagate(G, target):
         deltaEdge_x.replace(np.nan, 0)
         deltaEdge_x.replace([np.inf, -np.inf], 0, inplace=True)
         deltaEdge_x = deltaEdge_x * xGraph * UpdateMult
-
-        # deltaEdge_x.replace([np.inf, -np.inf], 0, inplace=True)
-        # deltaEdge_x.replace(np.nan, 0)
 
         xGraph = xGraph - deltaEdge_x
         xGraph = np.where((xGraph < 0), 0, xGraph)
@@ -183,16 +194,23 @@ def disruptPropagate(G, target):
         deltaEdge.append(yGraph)
         if iterG[-1].equals(iterG[-2]):
             break
+        finalMat = np.multiply(Negs, iterG[-1])
+        finalMat = pd.DataFrame(finalMat)
 
-    return iterG[-1]
+    return finalMat
 
 
-# a, b = loadData(file)
-# c, d = corrMatrix(a)
-# e = significanceCheck(d, c, 0.05)
-# q, r = networx(e, b)
-# yo = graphingNetwork(q)
-b = [[1, 2, 3],
-     [4, 5, 6],
-     [7, 8, 9]]
-disruptPropagate(b, 1)
+# this is all for testing please ignore it
+a, b = loadData(file)
+c, d = corrMatrix(a)
+e = significanceCheck(d, c, 0.05, 0, True)
+q, r = networx(e, b)
+yo = graphingNetwork(q)
+# god = disruptPropagate()
+# dd = [[1, 2, 3],
+#       [4, 5, 6],
+#       [7, 8, 9]]
+tyty = disruptPropagate(e, "PAG", b)
+mn, nm = networx(tyty.to_numpy(), b)
+graphingNetwork(mn)
+
