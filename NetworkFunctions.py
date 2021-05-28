@@ -11,17 +11,24 @@ import scipy.special as sc
 import plotly.graph_objects as go
 import seaborn as sns
 import matplotlib.pyplot as plt
+from bokeh.io import output_file, show
+from bokeh.models import (BoxZoomTool, Circle, HoverTool,
+                          MultiLine, Plot, Range1d, ResetTool,)
+from bokeh.palettes import Spectral4
+from bokeh.plotting import from_networkx
+from bokeh.models import ColumnDataSource, LabelSet
 
 # THIS IS FOR TEST PURPOSES ONLY
-file = '/home/ryansenne/The_Ramirez_Group/Cell_Counts.csv'
+file = 'test.csv'
 
 
 # simple function for loading our csv file
 def loadData(data):
     data = pd.read_csv(data)
-    node_names = data.columns.to_list()  # these are the names of our nodes, we need these for later
-    node_number = list(item for item in range(0, len(node_names)))  # find node number
-    nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}  # ordered list of nodes
+    data = data.apply(lambda x: x.fillna(x.mean()), axis=0)
+    node_names = data.columns.to_list()
+    node_number = list(item for item in range(0, len(node_names)))
+    nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
     return data, nodes
 
 
@@ -56,14 +63,35 @@ def significanceCheck(p, corr, alpha, threshold=0.0, plot=False):
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel):
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # create network from a thresholded matrix
-    remove = [node for node, degree in dict(graph.degree()).items() if degree == 0]  # find nodes with zero degree
-    graph.remove_nodes_from(remove)  # remove all nodes of zero degree
-    graph = nx.relabel_nodes(graph, nodeLabel)  # add the names of our nodes from loadData()
-    pos = nx.circular_layout(graph)  # change the shape of our graph for plotting, this is arbitrary
-    nx.set_node_attributes(graph, pos, name='pos')  # add position data for plotting
+def networx(corr_data, nodeLabel)
+    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)
+    graph = nx.relabel_nodes(graph, nodeLabel)
+    pos = nx.circular_layout(graph)
+    nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
+
+
+def GraphingNetwork(G):
+    negativeCorr, positiveCorr = 'red', 'black'
+    edge_attribs = {}
+    for i, j, _ in G.edges(data=True):
+        edge_color = negativeCorr if G[i][j]['weight'] < 0 else positiveCorr
+        edge_attribs[(i, j)] = edge_color
+    nx.set_edge_attributes(G, edge_attribs, "edge_color")
+    plot = Plot(plot_width=900, plot_height=900,
+                x_range=Range1d(-2.1, 2.1), y_range=Range1d(-2.1, 2.1))
+    plot.title.text = "ChR2 Mouse"
+    graph_renderer = from_networkx(G, nx.circular_layout, scale=1, center=(0, 0))
+    pos = graph_renderer.layout_provider.graph_layout
+    x, y = zip(*pos.values())
+    source = ColumnDataSource({'x': pd.Series(x), 'y': pd.Series(y), 'field': list(G.nodes())})
+    labels = LabelSet(x='x', y='y', text_font_size='10px', x_offset=-11, y_offset=-5, text='field', source=source)
+    graph_renderer.node_renderer.glyph = Circle(size=1, fill_color=Spectral4[0])
+    graph_renderer.edge_renderer.glyph = MultiLine(line_color="edge_color", line_alpha=0.8, line_width=0.1)
+    plot.renderers.append(graph_renderer)
+    plot.renderers.append(labels)
+    output_file("interactive_graphs.html")
+    show(plot)
 
 
 # this code is taken near-verbatim from the plotly example, I intend to rework the color schemes, but hey, why rebuild
@@ -112,12 +140,13 @@ def graphingNetwork(G):
             colorscale='YlGnBu',
             reversescale=True,
             color=[],
-            size=np.array(degree_list) * 15,
+            size= np.array(degree_list)*15,
+
             colorbar=dict(
                 thickness=15,
                 title='Node Connections',
                 xanchor='left',
-                titleside='right',
+                titleside='right'
             ),
             line_width=2))
     node_adjacencies = []
@@ -134,10 +163,11 @@ def graphingNetwork(G):
                         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
                     )
+
     fig.update_layout(font_size=40)
     return fig.show(renderer='browser'), degree_list
-
-
+  
+  
 # # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
 # def graphAttributes(graph, target, threshold, iterations, mode):
 
@@ -210,6 +240,7 @@ yo = graphingNetwork(q)
 # dd = [[1, 2, 3],
 #       [4, 5, 6],
 #       [7, 8, 9]]
+
 tyty = disruptPropagate(e, "PAG", b)
 mn, nm = networx(tyty.to_numpy(), b)
 graphingNetwork(mn)
