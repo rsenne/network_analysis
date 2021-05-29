@@ -63,7 +63,7 @@ def significanceCheck(p, corr, alpha, threshold=0.0, plot=False):
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel)
+def networx(corr_data, nodeLabel):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)
     graph = nx.relabel_nodes(graph, nodeLabel)
     pos = nx.circular_layout(graph)
