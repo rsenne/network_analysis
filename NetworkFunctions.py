@@ -9,7 +9,13 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 import scipy.special as sc
+from statsmodels.sandbox.stats.multicomp import multipletests
 import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+import scipy.cluster.hierarchy as sch
+from scipy.cluster.hierarchy import linkage, fcluster
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import markov_clustering as mc
 from bokeh.io import output_file, show
@@ -18,16 +24,13 @@ from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 from bokeh.models import ColumnDataSource, LabelSet
 from IPython import get_ipython
+import random
 
-# THIS IS FOR TEST PURPOSES ONLY
-file = 'TempChR2.csv'
-file2 = 'TempControl.csv'
-get_ipython().run_line_magic('matplotlib', 'qt')
+
 
 # simple function for loading our csv file
 def loadData(data):
     data = pd.read_csv(data)
-    # data.drop(columns=data.columns[data.nunique() <= 3], inplace=True)
     data = data.apply(lambda x: x.fillna(x.mean()), axis=0)
     node_names = data.columns.to_list()
     node_number = list(item for item in range(0, len(node_names)))
@@ -38,7 +41,8 @@ def loadData(data):
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
 def corrMatrix(data):
-    rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
+    rVal = np.corrcoef(data, rowvar=False) # calculate pearson coefficients
+    rVal[np.isnan(rVal)] = 0 # Will make all NaN values into zero
     rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
     df = data.shape[1] - 2  # calculate degrees of freedom
     ts = rf * rf * (df / (1 - rf * rf))  # calculate t's
@@ -48,23 +52,46 @@ def corrMatrix(data):
     p[np.triu_indices(p.shape[0], 1)] = pf
     p[np.tril_indices(p.shape[0], -1)] = p.T[np.tril_indices(p.shape[0], -1)]
     p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
-    return rVal, p
+    #Multiple comparison of p values using Bonferroni correction
+    rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha = 0.05, method= 'bonferroni', is_sorted = True)
+    return rVal, p, p_adjusted, alpha_corrected
 
 
 # using this function we will threshold based off of p-values previously calculated
-def significanceCheck(p, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True):
-    p = np.where((p >= alpha), 0, p)  # if not significant --> zero
-    p = np.where((p != 0), 1, p)  # if significant --> one
+def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True):
+    p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
+    p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
     if not include_Negs:
-        p = np.where((corr < 0), 0, p)
-    threshold_matrix = np.multiply(corr, p)  # remove any insignificant correlations
+        p_adjusted = np.where((corr < 0), 0, p_adjusted)
+    threshold_matrix = np.multiply(corr, p_adjusted)  # remove any insignificant correlations
     # remove correlations below threshold
     threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
     # create a heatmap of correlations if wanted
     if plot:
         pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
-        sns.clustermap(pandas_matrix)
+        sns.color_palette("viridis", as_cmap=True)
+        sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
     return threshold_matrix, pandas_matrix
+
+#I think we can perform hierarchical clustering here?
+def hierarch_clust(threshold_matrix,nodes, plot = False):
+    #Might be worth putting in another threshold to plot extreme r values
+    hc = AgglomerativeClustering(n_clusters=10, linkage='ward', compute_distances=True,compute_full_tree=True)  # Here is actually where you make the rules for the clustering
+    org_hc = hc.fit_predict(threshold_matrix) #the hc will then organize the input data into the defined clusters
+    print(np.bincount(org_hc)) #output to indicate how many nodes fall in each clustes
+    nodes_items = nodes.items() #Now we conduct some tomfoolery to identify clusters in nodes
+    nodes_list = list(nodes_items)
+    nodes_df = pd.DataFrame(nodes_list)
+    nodes_df["cluster"] = org_hc
+    #Reduce the data to two dimensions using PCA
+    pca = PCA(n_components=2)
+    components = pca.fit_transform(threshold_matrix)
+    if plot:
+        fig1 = plt.figure()
+        sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
+        fig2 = plt.figure()
+        plt.scatter(x = components[:,0], y = components[:,1],c=nodes_df["cluster"],cmap = "rainbow")
+    return nodes_df, components
 
 
 # we will create our undirected network graphs based on our matrices
@@ -75,6 +102,21 @@ def networx(corr_data, nodeLabel):
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+def markov(graph):
+    numnodes = graph.number_of_nodes()
+    positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
+    matrix = nx.to_scipy_sparse_matrix(graph) #Will generate an adjacency matrix from the graph
+    inflation_values = []
+    modularity_values = []
+    for inflation in [i /10 for i in range(15,35,10)]: #60,130,10 for ChR2
+        result = mc.run_mcl(matrix, inflation=inflation)
+        clusters = mc.get_clusters(result)
+        Q = mc.modularity(matrix=result, clusters=clusters)
+        inflation_values.append(inflation)
+        modularity_values.append(Q)
+    d = {"Inflation":inflation_values,"Modularity":modularity_values}
+    df = pd.DataFrame(d,columns=["Inflation","Modularity"]) #Make a df of the inflation and modularity values
+    return df
 
 def GraphingNetwork(G, plot_title, nx_layout):
     negativeCorr, positiveCorr = 'red', 'black'
@@ -159,6 +201,10 @@ def disruptPropagate(G, target, nodeNames):
 
     return finalMat
 
+# THIS IS FOR TEST PURPOSES ONLY
+#file = 'TempChR2.csv'
+#file2 = 'TempControl.csv'
+#get_ipython().run_line_magic('matplotlib', 'qt')
 
 # this is all for testing please ignore it
 # a, b = loadData(file)
@@ -167,33 +213,27 @@ def disruptPropagate(G, target, nodeNames):
 # q, r = networx(e, b)
 # yo = GraphingNetwork(q, "Chr2", nx.circular_layout)
 
-aa, bb = loadData(file2)
-cc, dd = corrMatrix(aa)
-ee, mm = significanceCheck(dd, cc, 0.0001, 0.0, bb, True, True)
-qq, rr = networx(ee, bb)
+#aa, bb = loadData(file2)
+#cc, dd = corrMatrix(aa)
+#ee, mm = significanceCheck(dd, cc, 0.0001, 0.0, bb, True, True)
+#qq, rr = networx(ee, bb)
 # yoyo = GraphingNetwork(qq, "control", nx.circular_layout)
 
 # dxm = e - ee
-numnodes=qq.number_of_nodes()
-positions = {i:(random() * 2 - 1, random() * 2 - 1) for i in range(numnodes)}
-matrix = nx.to_scipy_sparse_matrix(qq)
-result = mc.run_mcl(matrix, inflation=6)           # run MCL with default parameters
-clusters = mc.get_clusters(result)
+#numnodes=qq.number_of_nodes()
+#ChR2_
+#matrix = nx.to_scipy_sparse_matrix(qq)
+#result = mc.run_mcl(matrix, inflation=6)           # run MCL with default parameters
+#clusters = mc.get_clusters(result)
 # Q = mc.modularity(matrix=result, clusters=clusters)
 # print("inflation:", 20, "modularity:", Q)
 #print("inflation:", inflation, "modularity:", Q)
 # plt.figure()
 # mc.draw_graph(matrix, clusters, pos=positions, node_size=50, with_labels=False, edge_color="silver")
 
-# inflation_values = []
-# for inflation in [i for i in np.linspace(6, 7, 10)]:
-#     result = mc.run_mcl(matrix, inflation=inflation)
-#     clusters = mc.get_clusters(result)
-#     Q = mc.modularity(matrix=result, clusters=clusters)
-#     inflation_values.append(Q)
-#     print("inflation:", inflation, "modularity:", Q)
 
-plt.plot(Q)
+
+#plt.plot(Q)
 
 
 #   dd = [[1, 2, 3],
