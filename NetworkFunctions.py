@@ -73,10 +73,12 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
         sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
     return threshold_matrix, pandas_matrix
 
+
 #I think we can perform hierarchical clustering here?
-def hierarch_clust(threshold_matrix,nodes, plot = False):
+def hierarch_clust(threshold_matrix,nodes,edge_threshold = 0.85,plot = False):
     #Might be worth putting in another threshold to plot extreme r values
-    hc = AgglomerativeClustering(n_clusters=10, linkage='ward', compute_distances=True,compute_full_tree=True)  # Here is actually where you make the rules for the clustering
+    hc = AgglomerativeClustering(n_clusters=10, linkage='ward', compute_distances=True,compute_full_tree=True) # Here is actually where you make the rules for the clustering
+    threshold_matrix = np.where((abs(threshold_matrix) < edge_threshold), 0, threshold_matrix) #Will only examine the nodes with the highest threshold values
     org_hc = hc.fit_predict(threshold_matrix) #the hc will then organize the input data into the defined clusters
     print(np.bincount(org_hc)) #output to indicate how many nodes fall in each clustes
     nodes_items = nodes.items() #Now we conduct some tomfoolery to identify clusters in nodes
@@ -95,20 +97,22 @@ def hierarch_clust(threshold_matrix,nodes, plot = False):
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel):
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)
+def networx(corr_data,nodeLabel,r_thresh = 0.85):
+    corr_data = np.where((abs(corr_data) < r_thresh),0,corr_data) #will zero out the weaker edge connections
+    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph) #use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
     pos = nx.circular_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
-def markov(graph):
+
+def markov(graph,plot = False):
     numnodes = graph.number_of_nodes()
     positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
     matrix = nx.to_scipy_sparse_matrix(graph) #Will generate an adjacency matrix from the graph
     inflation_values = []
     modularity_values = []
-    for inflation in [i /10 for i in range(15,35,10)]: #60,130,10 for ChR2
+    for inflation in [i /10 for i in range(30,130,10)]: #60,130,10 for ChR2
         result = mc.run_mcl(matrix, inflation=inflation)
         clusters = mc.get_clusters(result)
         Q = mc.modularity(matrix=result, clusters=clusters)
@@ -116,7 +120,15 @@ def markov(graph):
         modularity_values.append(Q)
     d = {"Inflation":inflation_values,"Modularity":modularity_values}
     df = pd.DataFrame(d,columns=["Inflation","Modularity"]) #Make a df of the inflation and modularity values
-    return df
+    column = df["Modularity"]
+    max_index = column.idxmax()
+    optimal_inflation = ChR2_markov_df["Inflation"].iloc[max_index]
+    mc_results = mc.run_mcl(matrix,inflation = optimal_inflation)
+    mc_clusters = mc.get_clusters(mc_results)
+    if plot:
+        mc.draw_graph(matrix,mc_clusters,pos = positions,node_size = 100,with_labels = True,edge_color = 'silver')
+    return df,mc_results,mc_clusters
+
 
 def GraphingNetwork(G, plot_title, nx_layout):
     negativeCorr, positiveCorr = 'red', 'black'
@@ -139,7 +151,7 @@ def GraphingNetwork(G, plot_title, nx_layout):
     plot.renderers.append(labels)
     output_file("interactive_graphs.html")
     show(plot)
-  
+
 # # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
 # def graphAttributes(graph, target, threshold, iterations, mode):
 
