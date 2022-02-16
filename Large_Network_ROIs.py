@@ -1,4 +1,4 @@
-#Before you run this code, you have to manually delete left and right "Medulla" and "Midbrain" from every .csv file from LCT
+#Before you run this code, you have to manually delete left and right "Medulla", "Pons" and "Midbrain" from every .csv file from LCT
 #There are areas that are needed that start with "Medullary" or "Midbrain" that will still get dropped if those are included
 
 #Import libraries
@@ -15,7 +15,7 @@ def collect_csvs(filepath):
         frame["filename"] = os.path.basename(i)
         data.append(frame)
     df = pd.concat(data, ignore_index= True)
-    df = df.loc[:,["name","density (cells/mm^3)","filename"]]
+    df = df.loc[:,["name","acronym","density (cells/mm^3)","filename"]]
     return df
 
 #Get each df for Control and ChR2 group and sort them by name
@@ -23,17 +23,30 @@ df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Ne
 df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ChR2/").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe
-discard = ["background","ayer","Cerebellar","Cerebellum","Cerebral","Thalamus","Hypothalamus","Pons","Brain stem",
-           "Cochlear","plate","subplate","Epithalamus","Forel","A13","Hindbrain","Interbrain",
-           "Interpeduncular nucleus,","septal complex","Lobule II","Lobule III","Lobules IV-V","mammilary nucleus",
-           "Pretectal","Pallidum","Vestibular","retrorubral","Olfactory areas",
-           "sland","Retrohippocampal", "Pons","Periventricular region","Somatomotor areas","Somatosensory areas","Striatum",
-           "Mammilary body", "posterior complex","Visual areas","corpus callosum","cranial nerves","6","part","zone",
-           "Ammon's","groups", "Basic","region","Crus","part","group","division","Auditory areas","-like","pathway",
-           "ventricle","fasicle","root","matter","unassigned","direct tectospinal pathway","alveus","decussation",
-            "general","system","formation","capsule","forceps","splenium","Cerebrum","Dorsal column nuclei","central nucleus",
-           "dorsal nucleus","external nucleus","Isocortex","Perihypoglossal nuclei","Primary somatosensory area",
-           "Thalamus,","nuclei","tectospinal pathway"]
+discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","Isocortex","Cerebellar","Cerebellum","Thalamus",
+           "Hypothalamus","Epithalamus","Interbrain","Pallidum","Striatum","Hindbrain","Brain stem","plate","pole","tectospinal pathway",
+           "Lingula","II","III","IV-V","VI","VII","VIII","IX","X","Nucleus x","Nucleus y","Primary","Secondary","Supplemental",
+           "Spinal","Accessory","dorsal part","ventral part","lateral part","medial part","anterior part","posterior part",
+           "ventrolateral part","agranular part","ventromedial part","caudodorsal","rostroventral","capsular part",
+           "parvicellular part","magnocellular part","Dorsal part","Ventral part","intermediate part","preoptic part","median part",
+           "intermediate part","Interpeduncular nucleus,","Inferior colliculus,","division","like","lobule","visual","Abducens",
+           "Ammon","Anterior area","olfactory","pretectal","posterior commisure","optic tract","Anterodorsal","Anteromedial",
+           "Anteroventral nucleus","Arcuate","Supraoptic","Paraventricular hypothalamic","postrema","prostriata","Barrington",
+           "ochlear","Crus","Culmen","Cuneate","Copula","Cortical amygdalar","Central lateral","Central medial","Dorsal cochlear",
+           "Dorsal column","vagus","peduncular area","auditory","Dorsal tegmental","Periventricular region","Ethmoid",
+           "External","Facial","Forel","locculus","Gigantocellular","Gracile","Hippocamp","ypoglossal","lateral zone",
+           "medial zone","olivary","salivatory","Infracerebellar","Interantero","leaflet","Intermedi","Intertrigeminal",
+           "Lateral mammillary","Medial mammillary","Supramammillary","Tuberomammillary","Lateral posterior",
+           "Lateral reticular","septal complex","vestibular","Latero","Linear","Magnocellular reticular","Medial accessory",
+           "geniculate complex","Medullary","raphe nuclei","Midbrain,","Midline group","Motor nucleus","ambiguus","incertus",
+           "Roller","lemniscus","solitary tract","trapezoid body","prepositus","Nucleus raphe","Paragigantocellular",
+           "Parapyramidal","Parasolitary","Parataenial","Paratr","Parvicellular","Perireunesis","Peritrigeminal","Piriform",
+           "Pontine","Posterior complex","Posterior intralaminar","limiting","Posterior triangular","Posterodorsal tegmental nucleus",
+           "transition","Principal sensory","Retrohippocampal","Retroparafascicular","Subceruleus nucleus","Subcommissural",
+           "Subgeniculate","Sublaterodorsal","Submedial","Suprage","Supratrigeminal","Taenia tecta","Tegmental reticular",
+           "Ventral cochlear","Ventral group","Ventral posterolateral","Ventral posteromedial","Vestibular nuclei","Oculomotor",
+           "Nucleus of the posterior","Postrhinal"]
+
 
 #Create new dataframes after dropping the lines in the discard list
 df_Control_deleted = df_Control[~df_Control.name.str.contains('|'.join(discard))]
@@ -73,17 +86,20 @@ Control = pd.merge(Left_Control,Right_Control,how='inner',on = ["name","filename
 #Only take the three columns "filename","name", and the bilateral averages into the new dataframe
 
 ChR2["Bilateral Density (cells/mm^3)"] = ChR2[["density (cells/mm^3)_Left","density (cells/mm^3)_Right"]].mean(axis = 1)
-ChR2 = ChR2[["filename","name","Bilateral Density (cells/mm^3)"]]
+ChR2 = ChR2[["filename","name","acronym_Left","Bilateral Density (cells/mm^3)"]]
 
 Control["Bilateral Density (cells/mm^3)"] = Control[["density (cells/mm^3)_Left","density (cells/mm^3)_Right"]].mean(axis = 1)
-Control = Control[["filename","name","Bilateral Density (cells/mm^3)"]]
+Control = Control[["filename","name","acronym_Left","Bilateral Density (cells/mm^3)"]]
+
+ChR2["acronym_Left"] = ChR2["acronym_Left"].map(lambda x: x.replace('-L',""))
+Control["acronym_Left"] = Control["acronym_Left"].map(lambda x: x.replace('-L',""))
 
 #Use the pivot function to get the correct index that Ryan wants and just get the levels to have only the area names
-ChR2 = ChR2.pivot(index = "filename", columns = "name", values =["Bilateral Density (cells/mm^3)"])
+ChR2 = ChR2.pivot(index = "filename", columns = "acronym_Left", values =["Bilateral Density (cells/mm^3)"])
 ChR2.columns = ChR2.columns.get_level_values(1)
 ChR2.reset_index(drop = True, inplace = True)
 
-Control = Control.pivot(index = "filename", columns = "name", values =["Bilateral Density (cells/mm^3)"])
+Control = Control.pivot(index = "filename", columns = "acronym_Left", values =["Bilateral Density (cells/mm^3)"])
 Control.columns = Control.columns.get_level_values(1)
 Control.reset_index(drop = True, inplace = True)
 
