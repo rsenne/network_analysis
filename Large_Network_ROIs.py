@@ -103,6 +103,15 @@ Control = Control.pivot(index = "filename", columns = "acronym_Left", values =["
 Control.columns = Control.columns.get_level_values(1)
 Control.reset_index(drop = True, inplace = True)
 
+#Here are the ROIs by Allen Brain Group that we want to organize
+ROIs = pd.read_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ROIs.csv")
+ROIs = ROIs.loc[:,["Abbreviation","Allen Group Name"]].sort_values("Allen Group Name").set_index("Abbreviation").T
+cols = ROIs.columns.tolist()
+
+#Need to reorganize the datframe by the index defined by our ROIs
+ChR2 = ChR2[cols]
+Control = Control[cols]
+
 #Turn the final ChR2 and Control dfs into .csv files to send to Ryan
 ChR2.to_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ChR2/ChR2_Large_Network.csv", index = False)
 Control.to_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/Control/Control_Large_Network.csv", index = False)

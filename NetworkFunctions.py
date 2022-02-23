@@ -11,9 +11,7 @@ import numpy as np
 import scipy.special as sc
 from statsmodels.sandbox.stats.multicomp import multipletests
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler
 import scipy.cluster.hierarchy as sch
-from scipy.cluster.hierarchy import linkage, fcluster
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
@@ -23,10 +21,8 @@ from bokeh.models import (Circle, MultiLine, Plot, Range1d, BoxZoomTool, ResetTo
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 from bokeh.models import ColumnDataSource, LabelSet
-from IPython import get_ipython
 import random
-
-
+from IPython import get_ipython
 
 # simple function for loading our csv file
 def loadData(data):
@@ -75,16 +71,26 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
 
 #I think we can perform hierarchical clustering here?
-def hierarch_clust(threshold_matrix,nodes,edge_threshold = 0.85,plot = False):
-    #Might be worth putting in another threshold to plot extreme r values
-    hc = AgglomerativeClustering(n_clusters=10, linkage='ward', compute_distances=True,compute_full_tree=True) # Here is actually where you make the rules for the clustering
-    threshold_matrix = np.where((abs(threshold_matrix) < edge_threshold), 0, threshold_matrix) #Will only examine the nodes with the highest threshold values
-    org_hc = hc.fit_predict(threshold_matrix) #the hc will then organize the input data into the defined clusters
-    print(np.bincount(org_hc)) #output to indicate how many nodes fall in each clustes
+def hierarch_clust(threshold_matrix,nodes,plot = False):
+    #threshold_matrix = np.arctanh(threshold_matrix) # Will do a Fisher z transformation of the data
+    #Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in cluster # across cuts
+    distances = [10,20,30,40,50,60]
+    num_clusts = []
+    for i in distances:
+        hc = AgglomerativeClustering(n_clusters=None,linkage='ward',distance_threshold=i,compute_distances=True,compute_full_tree=True)
+        org_hc = hc.fit_predict(threshold_matrix) # Here is actually where you make the rules for the clustering
+        print(np.bincount(org_hc)) #output to indicate how many nodes fall in each clustes
+        num_clusters = len(np.unique(org_hc))
+        num_clusts.append(num_clusters)
+    d = {"Distance":distances,"Number of Clusters":num_clusts}
+    df_clusts = pd.DataFrame(d,columns=["Distance","Number of Clusters"])
+    #Next, perform the HC on the distance that is "halfway" down the dendrogram
+    hc_2 = AgglomerativeClustering(n_clusters=None,linkage='ward',distance_threshold=40,compute_distances=True,compute_full_tree=True)
+    org_hc_2 = hc_2.fit_predict(threshold_matrix)
     nodes_items = nodes.items() #Now we conduct some tomfoolery to identify clusters in nodes
     nodes_list = list(nodes_items)
     nodes_df = pd.DataFrame(nodes_list)
-    nodes_df["cluster"] = org_hc
+    nodes_df["cluster"] = org_hc_2
     #Reduce the data to two dimensions using PCA
     pca = PCA(n_components=2)
     components = pca.fit_transform(threshold_matrix)
@@ -93,15 +99,16 @@ def hierarch_clust(threshold_matrix,nodes,edge_threshold = 0.85,plot = False):
         sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
         fig2 = plt.figure()
         plt.scatter(x = components[:,0], y = components[:,1],c=nodes_df["cluster"],cmap = "rainbow")
-    return nodes_df, components
+    return df_clusts, nodes_df, components
 
 
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data,nodeLabel,r_thresh = 0.85):
-    corr_data = np.where((abs(corr_data) < r_thresh),0,corr_data) #will zero out the weaker edge connections
+    #corr_data = np.arctanh(corr_data) # Another Fisher transformation
+    corr_data = np.where((corr_data < r_thresh),0,corr_data) #will zero out the weaker edge connections and also not look at negative edge connections
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph) #use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
-    pos = nx.circular_layout(graph)
+    pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
@@ -112,7 +119,7 @@ def markov(graph,plot = False):
     matrix = nx.to_scipy_sparse_matrix(graph) #Will generate an adjacency matrix from the graph
     inflation_values = []
     modularity_values = []
-    for inflation in [i /10 for i in range(30,130,10)]: #60,130,10 for ChR2
+    for inflation in [i /10 for i in range(15,135,5)]:
         result = mc.run_mcl(matrix, inflation=inflation)
         clusters = mc.get_clusters(result)
         Q = mc.modularity(matrix=result, clusters=clusters)
@@ -122,7 +129,7 @@ def markov(graph,plot = False):
     df = pd.DataFrame(d,columns=["Inflation","Modularity"]) #Make a df of the inflation and modularity values
     column = df["Modularity"]
     max_index = column.idxmax()
-    optimal_inflation = ChR2_markov_df["Inflation"].iloc[max_index]
+    optimal_inflation = df["Inflation"].iloc[max_index]
     mc_results = mc.run_mcl(matrix,inflation = optimal_inflation)
     mc_clusters = mc.get_clusters(mc_results)
     if plot:
@@ -144,7 +151,7 @@ def GraphingNetwork(G, plot_title, nx_layout):
     graph_renderer = from_networkx(G, nx_layout, scale=1, center=(0, 0))
     x, y = zip(*graph_renderer.layout_provider.graph_layout.values())
     source = ColumnDataSource({'x': pd.Series(x), 'y': pd.Series(y), 'field': list(G.nodes())})
-    labels = LabelSet(x='x', y='y', text_font_size='10px', x_offset=0, y_offset=0, text='field', source=source)
+    labels = LabelSet(x='x', y='y', text_font_size='14px', x_offset=0, y_offset=0, text='field', source=source)
     graph_renderer.node_renderer.glyph = Circle(size=50, fill_color=Spectral4[0])
     graph_renderer.edge_renderer.glyph = MultiLine(line_color="edge_color", line_alpha=0.8, line_width=1)
     plot.renderers.append(graph_renderer)
@@ -154,6 +161,7 @@ def GraphingNetwork(G, plot_title, nx_layout):
 
 # # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
 # def graphAttributes(graph, target, threshold, iterations, mode):
+# For any sort of quantitative statistics, need to Fisher transform the correlation data
 
 
 # this is the disruption propagation model from Vetere et al. 2018
