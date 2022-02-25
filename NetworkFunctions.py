@@ -13,15 +13,15 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import markov_clustering as mc
 from bokeh.io import output_file, show
-from bokeh.models import (Circle, MultiLine, Plot, Range1d, BoxZoomTool, ResetTool)
+from bokeh.models import (Circle, MultiLine, Plot, Range1d, BoxZoomTool, ResetTool, PanTool)
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 from bokeh.models import ColumnDataSource, LabelSet
 from IPython import get_ipython
 
 # THIS IS FOR TEST PURPOSES ONLY
-file = 'TempChR2.csv'
-file2 = 'TempControl.csv'
+file = '/Users/ryansenne/PycharmProjects/networks/ChR2_Large_Network.csv'
+file2 = '/Users/ryansenne/PycharmProjects/networks/Control_Large_Network.csv'
 get_ipython().run_line_magic('matplotlib', 'qt')
 
 # simple function for loading our csv file
@@ -62,21 +62,29 @@ def significanceCheck(p, corr, alpha, threshold=0.0, names=None, plot=False, inc
     threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
     # create a heatmap of correlations if wanted
     if plot:
-        pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+        if names:
+            pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+        else:
+            pandas_matrix = pd.DataFrame(threshold_matrix)
         sns.clustermap(pandas_matrix)
-    return threshold_matrix, pandas_matrix
+        return threshold_matrix, pandas_matrix
+    else:
+        return threshold_matrix
 
 
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data, nodeLabel):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)
     graph = nx.relabel_nodes(graph, nodeLabel)
-    pos = nx.circular_layout(graph)
+    pos = nx.random_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+def grab_attributes(graph):
+    return nx.degree_centrality(graph), nx.betweenness_centrality,(graph), nx.eigenvector_centrality(graph)
 
-def GraphingNetwork(G, plot_title, nx_layout):
+
+def GraphingNetwork(G, plot_title, pos):
     negativeCorr, positiveCorr = 'red', 'black'
     edge_attribs = {}
     for i, j, _ in G.edges(data=True):
@@ -86,8 +94,8 @@ def GraphingNetwork(G, plot_title, nx_layout):
     plot = Plot(plot_width=2000, plot_height=2000,
                 x_range=Range1d(-1.1, 1.1), y_range=Range1d(-1.1, 1.1))
     plot.title.text = plot_title
-    plot.add_tools(BoxZoomTool(), ResetTool())
-    graph_renderer = from_networkx(G, nx_layout, scale=1, center=(0, 0))
+    plot.add_tools(BoxZoomTool(), ResetTool(), PanTool())
+    graph_renderer = from_networkx(G, nx.rescale_layout_dict(pos, scale=5), center=(0, 0))
     x, y = zip(*graph_renderer.layout_provider.graph_layout.values())
     source = ColumnDataSource({'x': pd.Series(x), 'y': pd.Series(y), 'field': list(G.nodes())})
     labels = LabelSet(x='x', y='y', text_font_size='10px', x_offset=0, y_offset=0, text='field', source=source)
@@ -174,11 +182,11 @@ qq, rr = networx(ee, bb)
 # yoyo = GraphingNetwork(qq, "control", nx.circular_layout)
 
 # dxm = e - ee
-numnodes=qq.number_of_nodes()
-positions = {i:(random() * 2 - 1, random() * 2 - 1) for i in range(numnodes)}
-matrix = nx.to_scipy_sparse_matrix(qq)
-result = mc.run_mcl(matrix, inflation=6)           # run MCL with default parameters
-clusters = mc.get_clusters(result)
+# numnodes=qq.number_of_nodes()
+# positions = {i:(random() * 2 - 1, random() * 2 - 1) for i in range(numnodes)}
+# matrix = nx.to_scipy_sparse_matrix(qq)
+# result = mc.run_mcl(matrix, inflation=6)           # run MCL with default parameters
+# clusters = mc.get_clusters(result)
 # Q = mc.modularity(matrix=result, clusters=clusters)
 # print("inflation:", 20, "modularity:", Q)
 #print("inflation:", inflation, "modularity:", Q)
@@ -193,7 +201,7 @@ clusters = mc.get_clusters(result)
 #     inflation_values.append(Q)
 #     print("inflation:", inflation, "modularity:", Q)
 
-plt.plot(Q)
+# plt.plot(Q)
 
 
 #   dd = [[1, 2, 3],
