@@ -20,9 +20,10 @@ from bokeh.models import ColumnDataSource, LabelSet
 from IPython import get_ipython
 
 # THIS IS FOR TEST PURPOSES ONLY
-file = '/Users/ryansenne/PycharmProjects/networks/ChR2_Large_Network.csv'
-file2 = '/Users/ryansenne/PycharmProjects/networks/Control_Large_Network.csv'
+file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
+file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
 get_ipython().run_line_magic('matplotlib', 'qt')
+
 
 # simple function for loading our csv file
 def loadData(data):
@@ -80,32 +81,34 @@ def networx(corr_data, nodeLabel):
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+
 def grab_attributes(graph):
-    return nx.degree_centrality(graph), nx.betweenness_centrality,(graph), nx.eigenvector_centrality(graph)
+    deg = nx.degree_centrality(graph)
+    between = nx.betweenness_centrality(graph)
+    eig = nx.eigenvector_centrality(graph)
+    deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[1])}
+    between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[1])}
+    eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
+    return deg_sort, between_sort, eig_sort
+
+def graph_network(G):
+    negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
+    edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
+    deg = G.degree()
+    node_sizes = [degree / np.mean(list(dict(deg).values())) * 1000 for degree in dict(deg).values()]
+    pos = nx.spring_layout(G, k=0.5, seed=3847897236)
+    fig, ax = plt.subplots(figsize=(20, 15))
+    nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=edge_colors)
+    nx.draw_networkx_nodes(G, pos=pos, node_size=node_sizes)
+    nx.draw_networkx_labels(G, pos=pos)
+    ax.margins(0.1, 0.05)
+    fig.tight_layout()
+    plt.show()
+    plt.axis('off')
+    return
 
 
-def GraphingNetwork(G, plot_title, pos):
-    negativeCorr, positiveCorr = 'red', 'black'
-    edge_attribs = {}
-    for i, j, _ in G.edges(data=True):
-        edge_color = negativeCorr if G[i][j]['weight'] < 0 else positiveCorr
-        edge_attribs[(i, j)] = edge_color
-    nx.set_edge_attributes(G, edge_attribs, "edge_color")
-    plot = Plot(plot_width=2000, plot_height=2000,
-                x_range=Range1d(-1.1, 1.1), y_range=Range1d(-1.1, 1.1))
-    plot.title.text = plot_title
-    plot.add_tools(BoxZoomTool(), ResetTool(), PanTool())
-    graph_renderer = from_networkx(G, nx.rescale_layout_dict(pos, scale=5), center=(0, 0))
-    x, y = zip(*graph_renderer.layout_provider.graph_layout.values())
-    source = ColumnDataSource({'x': pd.Series(x), 'y': pd.Series(y), 'field': list(G.nodes())})
-    labels = LabelSet(x='x', y='y', text_font_size='10px', x_offset=0, y_offset=0, text='field', source=source)
-    graph_renderer.node_renderer.glyph = Circle(size=50, fill_color=Spectral4[0])
-    graph_renderer.edge_renderer.glyph = MultiLine(line_color="edge_color", line_alpha=0.8, line_width=1)
-    plot.renderers.append(graph_renderer)
-    plot.renderers.append(labels)
-    output_file("interactive_graphs.html")
-    show(plot)
-  
+
 # # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
 # def graphAttributes(graph, target, threshold, iterations, mode):
 
@@ -177,9 +180,9 @@ def disruptPropagate(G, target, nodeNames):
 
 aa, bb = loadData(file2)
 cc, dd = corrMatrix(aa)
-ee, mm = significanceCheck(dd, cc, 0.0001, 0.0, bb, True, True)
+ee, mm = significanceCheck(dd, cc, 0.0001, 0.5, bb, True, True)
 qq, rr = networx(ee, bb)
-# yoyo = GraphingNetwork(qq, "control", nx.circular_layout)
+yoyo = graph_network(qq)
 
 # dxm = e - ee
 # numnodes=qq.number_of_nodes()
@@ -189,7 +192,7 @@ qq, rr = networx(ee, bb)
 # clusters = mc.get_clusters(result)
 # Q = mc.modularity(matrix=result, clusters=clusters)
 # print("inflation:", 20, "modularity:", Q)
-#print("inflation:", inflation, "modularity:", Q)
+# print("inflation:", inflation, "modularity:", Q)
 # plt.figure()
 # mc.draw_graph(matrix, clusters, pos=positions, node_size=50, with_labels=False, edge_color="silver")
 
