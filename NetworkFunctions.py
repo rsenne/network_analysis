@@ -67,11 +67,12 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
         pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
         sns.color_palette("viridis", as_cmap=True)
         sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
-    return threshold_matrix, pandas_matrix
+        fig1 = plt.figure()
+        sns.heatmap(pandas_matrix,cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
+    return threshold_matrix
 
 
-#I think we can perform hierarchical clustering here?
-def hierarch_clust(threshold_matrix,nodes,plot = False):
+def hierarch_clust(threshold_matrix,nodes,allen_groups,plot = False):
     #threshold_matrix = np.arctanh(threshold_matrix) # Will do a Fisher z transformation of the data
     #Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in cluster # across cuts
     distances = [10,20,30,40,50,60]
@@ -91,13 +92,14 @@ def hierarch_clust(threshold_matrix,nodes,plot = False):
     nodes_list = list(nodes_items)
     nodes_df = pd.DataFrame(nodes_list)
     nodes_df["cluster"] = org_hc_2
+    nodes_df["Allen Group Name"] = allen_groups
     #Reduce the data to two dimensions using PCA
     pca = PCA(n_components=2)
     components = pca.fit_transform(threshold_matrix)
     if plot:
-        fig1 = plt.figure()
-        sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
         fig2 = plt.figure()
+        sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
+        fig3 = plt.figure()
         plt.scatter(x = components[:,0], y = components[:,1],c=nodes_df["cluster"],cmap = "rainbow")
     return df_clusts, nodes_df, components
 
@@ -112,10 +114,35 @@ def networx(corr_data,nodeLabel,r_thresh = 0.85):
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+def GraphAttributes(graph):
+
+    #Centrality Metrics
+    degree_cent = nx.degree_centrality(graph)
+    eigen_cent = nx.eigenvector_centrality(graph, max_iter=1000, wieght='weight')
+    betweenness = nx.betweenness_centrality(graph,weight = 'weight',normalized=False)
+    closeness = nx.closeness_centrality(ChR2_graph, distance='weight')
+
+    #Clustering Coefficient
+    cluster_coeff = nx.clustering(graph,weight = 'weight')
+    avrg_clust = nx.average_clustering(graph,weight='weight')
+
+    #Efficiency
+    local_eff = nx.local_efficiency(graph)
+    global_eff = nx.global_efficiency(graph)
+
+    #Small-worldness
+    shuffle = nx.random_reference(graph)
+    shuffle_sigma = nx.sigma(shuffle)
+    graph_sigma = nx.sigma(graph)
+
+    return degree_cent,eigen_cent,betweenness,closeness,cluster_coeff,avrg_clust,local_eff,global_eff,shuffle_sigma,graph_sigma
+
+# # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
+# def graphAttributes(graph, target, threshold, iterations, mode):
+# For any sort of quantitative statistics, need to Fisher transform the correlation data
+
 
 def markov(graph,plot = False):
-    numnodes = graph.number_of_nodes()
-    positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
     matrix = nx.to_scipy_sparse_matrix(graph) #Will generate an adjacency matrix from the graph
     inflation_values = []
     modularity_values = []
@@ -133,6 +160,8 @@ def markov(graph,plot = False):
     mc_results = mc.run_mcl(matrix,inflation = optimal_inflation)
     mc_clusters = mc.get_clusters(mc_results)
     if plot:
+        numnodes = graph.number_of_nodes()
+        positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
         mc.draw_graph(matrix,mc_clusters,pos = positions,node_size = 100,with_labels = True,edge_color = 'silver')
     return df,mc_results,mc_clusters
 
@@ -158,10 +187,6 @@ def GraphingNetwork(G, plot_title, nx_layout):
     plot.renderers.append(labels)
     output_file("interactive_graphs.html")
     show(plot)
-
-# # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
-# def graphAttributes(graph, target, threshold, iterations, mode):
-# For any sort of quantitative statistics, need to Fisher transform the correlation data
 
 
 # this is the disruption propagation model from Vetere et al. 2018
