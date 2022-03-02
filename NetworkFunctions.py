@@ -17,12 +17,17 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import markov_clustering as mc
 from bokeh.io import output_file, show
-from bokeh.models import (Circle, MultiLine, Plot, Range1d, BoxZoomTool, ResetTool)
+from bokeh.models import (Circle, MultiLine, Plot, Range1d, BoxZoomTool, ResetTool, PanTool)
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 from bokeh.models import ColumnDataSource, LabelSet
 import random
-from IPython import get_ipython
+
+
+# THIS IS FOR TEST PURPOSES ONLY
+file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
+file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
+
 
 # simple function for loading our csv file
 def loadData(data):
@@ -64,12 +69,19 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
     # create a heatmap of correlations if wanted
     if plot:
-        pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
-        sns.color_palette("viridis", as_cmap=True)
-        sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
-        fig1 = plt.figure()
-        sns.heatmap(pandas_matrix,cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
-    return threshold_matrix
+      if names:
+            pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+        else:
+            pandas_matrix = pd.DataFrame(threshold_matrix)
+        sns.clustermap(pandas_matrix)
+        return threshold_matrix, pandas_matrix
+    else:
+        return threshold_matrix
+#         pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+#         sns.color_palette("viridis", as_cmap=True)
+#         sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
+#         fig1 = plt.figure()
+#         sns.heatmap(pandas_matrix,cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
 
 
 def hierarch_clust(threshold_matrix,nodes,allen_groups,plot = False):
@@ -104,6 +116,7 @@ def hierarch_clust(threshold_matrix,nodes,allen_groups,plot = False):
     return df_clusts, nodes_df, components
 
 
+
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data,nodeLabel,r_thresh = 0.85):
     #corr_data = np.arctanh(corr_data) # Another Fisher transformation
@@ -113,33 +126,6 @@ def networx(corr_data,nodeLabel,r_thresh = 0.85):
     pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
-
-def GraphAttributes(graph):
-
-    #Centrality Metrics
-    degree_cent = nx.degree_centrality(graph)
-    eigen_cent = nx.eigenvector_centrality(graph, max_iter=1000, wieght='weight')
-    betweenness = nx.betweenness_centrality(graph,weight = 'weight',normalized=False)
-    closeness = nx.closeness_centrality(ChR2_graph, distance='weight')
-
-    #Clustering Coefficient
-    cluster_coeff = nx.clustering(graph,weight = 'weight')
-    avrg_clust = nx.average_clustering(graph,weight='weight')
-
-    #Efficiency
-    local_eff = nx.local_efficiency(graph)
-    global_eff = nx.global_efficiency(graph)
-
-    #Small-worldness
-    shuffle = nx.random_reference(graph)
-    shuffle_sigma = nx.sigma(shuffle)
-    graph_sigma = nx.sigma(graph)
-
-    return degree_cent,eigen_cent,betweenness,closeness,cluster_coeff,avrg_clust,local_eff,global_eff,shuffle_sigma,graph_sigma
-
-# # calculate the necessary graph attributes such as centrality, betweenness, global efficiency etc.
-# def graphAttributes(graph, target, threshold, iterations, mode):
-# For any sort of quantitative statistics, need to Fisher transform the correlation data
 
 
 def markov(graph,plot = False):
@@ -166,29 +152,32 @@ def markov(graph,plot = False):
     return df,mc_results,mc_clusters
 
 
-def GraphingNetwork(G, plot_title, nx_layout):
-    negativeCorr, positiveCorr = 'red', 'black'
-    edge_attribs = {}
-    for i, j, _ in G.edges(data=True):
-        edge_color = negativeCorr if G[i][j]['weight'] < 0 else positiveCorr
-        edge_attribs[(i, j)] = edge_color
-    nx.set_edge_attributes(G, edge_attribs, "edge_color")
-    plot = Plot(plot_width=2000, plot_height=2000,
-                x_range=Range1d(-1.1, 1.1), y_range=Range1d(-1.1, 1.1))
-    plot.title.text = plot_title
-    plot.add_tools(BoxZoomTool(), ResetTool())
-    graph_renderer = from_networkx(G, nx_layout, scale=1, center=(0, 0))
-    x, y = zip(*graph_renderer.layout_provider.graph_layout.values())
-    source = ColumnDataSource({'x': pd.Series(x), 'y': pd.Series(y), 'field': list(G.nodes())})
-    labels = LabelSet(x='x', y='y', text_font_size='14px', x_offset=0, y_offset=0, text='field', source=source)
-    graph_renderer.node_renderer.glyph = Circle(size=50, fill_color=Spectral4[0])
-    graph_renderer.edge_renderer.glyph = MultiLine(line_color="edge_color", line_alpha=0.8, line_width=1)
-    plot.renderers.append(graph_renderer)
-    plot.renderers.append(labels)
-    output_file("interactive_graphs.html")
-    show(plot)
+def grab_attributes(graph):
+    deg = nx.degree_centrality(graph)
+    between = nx.betweenness_centrality(graph)
+    eig = nx.eigenvector_centrality(graph)
+    deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[1])}
+    between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[1])}
+    eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
+    return deg_sort, between_sort, eig_sort
 
+def graph_network(G):
+    negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
+    edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
+    deg = G.degree()
+    node_sizes = [degree / np.mean(list(dict(deg).values())) * 1000 for degree in dict(deg).values()]
+    pos = nx.spring_layout(G, k=0.5, seed=3847897236)
+    fig, ax = plt.subplots(figsize=(20, 15))
+    nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=edge_colors)
+    nx.draw_networkx_nodes(G, pos=pos, node_size=node_sizes)
+    nx.draw_networkx_labels(G, pos=pos)
+    ax.margins(0.1, 0.05)
+    fig.tight_layout()
+    plt.show()
+    plt.axis('off')
+    return
 
+  
 # this is the disruption propagation model from Vetere et al. 2018
 def disruptPropagate(G, target, nodeNames):
     G = pd.DataFrame(G, index=list(nodeNames.values()), columns=list(nodeNames.values()))  # create df with node names
@@ -246,47 +235,3 @@ def disruptPropagate(G, target, nodeNames):
 
     return finalMat
 
-# THIS IS FOR TEST PURPOSES ONLY
-#file = 'TempChR2.csv'
-#file2 = 'TempControl.csv'
-#get_ipython().run_line_magic('matplotlib', 'qt')
-
-# this is all for testing please ignore it
-# a, b = loadData(file)
-# c, d = corrMatrix(a)
-# e, m = significanceCheck(d, c, 0.0001, 0.0, b, True, True)
-# q, r = networx(e, b)
-# yo = GraphingNetwork(q, "Chr2", nx.circular_layout)
-
-#aa, bb = loadData(file2)
-#cc, dd = corrMatrix(aa)
-#ee, mm = significanceCheck(dd, cc, 0.0001, 0.0, bb, True, True)
-#qq, rr = networx(ee, bb)
-# yoyo = GraphingNetwork(qq, "control", nx.circular_layout)
-
-# dxm = e - ee
-#numnodes=qq.number_of_nodes()
-#ChR2_
-#matrix = nx.to_scipy_sparse_matrix(qq)
-#result = mc.run_mcl(matrix, inflation=6)           # run MCL with default parameters
-#clusters = mc.get_clusters(result)
-# Q = mc.modularity(matrix=result, clusters=clusters)
-# print("inflation:", 20, "modularity:", Q)
-#print("inflation:", inflation, "modularity:", Q)
-# plt.figure()
-# mc.draw_graph(matrix, clusters, pos=positions, node_size=50, with_labels=False, edge_color="silver")
-
-
-
-#plt.plot(Q)
-
-
-#   dd = [[1, 2, 3],
-#         [4, 5, 6],
-#         [7, 8, 9]]
-# GraphingNetwork(dd)
-# h = disruptPropagate(dd, 0)
-
-# tyty = disruptPropagate(e, "PAG", b)
-# mn, nm = networx(tyty.to_numpy(), b)
-# # graphingNetwork(mn)
