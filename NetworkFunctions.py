@@ -10,23 +10,14 @@ import pandas as pd
 import numpy as np
 import scipy.special as sc
 from statsmodels.sandbox.stats.multicomp import multipletests
+import statsmodels.api as sm
 import seaborn as sns
 import scipy.cluster.hierarchy as sch
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.decomposition import PCA
+from statsmodels.graphics.regressionplots import abline_plot
 import matplotlib.pyplot as plt
 import markov_clustering as mc
-from bokeh.io import output_file, show
-from bokeh.models import (Circle, MultiLine, Plot, Range1d, BoxZoomTool, ResetTool, PanTool)
-from bokeh.palettes import Spectral4
-from bokeh.plotting import from_networkx
-from bokeh.models import ColumnDataSource, LabelSet
 import random
-
-
-# THIS IS FOR TEST PURPOSES ONLY
-file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
-file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
 
 
 # simple function for loading our csv file
@@ -69,14 +60,14 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
     # create a heatmap of correlations if wanted
     if plot:
-      if names:
+        if names:
             pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix)
-        return threshold_matrix, pandas_matrix
+            sns.clustermap(pandas_matrix)
+            return threshold_matrix, pandas_matrix
     else:
-        return threshold_matrix
+            return threshold_matrix
 #         pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
 #         sns.color_palette("viridis", as_cmap=True)
 #         sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
@@ -84,8 +75,7 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 #         sns.heatmap(pandas_matrix,cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
 
 
-def hierarch_clust(threshold_matrix,nodes,allen_groups,plot = False):
-    #threshold_matrix = np.arctanh(threshold_matrix) # Will do a Fisher z transformation of the data
+def hierarch_clust(threshold_matrix,nodes,allen_groups,plot=False):
     #Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in cluster # across cuts
     distances = [10,20,30,40,50,60]
     num_clusts = []
@@ -105,30 +95,27 @@ def hierarch_clust(threshold_matrix,nodes,allen_groups,plot = False):
     nodes_df = pd.DataFrame(nodes_list)
     nodes_df["cluster"] = org_hc_2
     nodes_df["Allen Group Name"] = allen_groups
-    #Reduce the data to two dimensions using PCA
-    pca = PCA(n_components=2)
-    components = pca.fit_transform(threshold_matrix)
     if plot:
         fig2 = plt.figure()
         sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
         fig3 = plt.figure()
-        plt.scatter(x = components[:,0], y = components[:,1],c=nodes_df["cluster"],cmap = "rainbow")
-    return df_clusts, nodes_df, components
-
+    return df_clusts, nodes_df
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data,nodeLabel,r_thresh = 0.85):
+def networx(corr_data,nodeLabel):
     #corr_data = np.arctanh(corr_data) # Another Fisher transformation
-    corr_data = np.where((corr_data < r_thresh),0,corr_data) #will zero out the weaker edge connections and also not look at negative edge connections
+    #will zero out the weaker edge connections and also not look at negative edge connections
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph) #use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
+    remove = [node for node, degree in graph.degree() if degree < 1]
+    graph.remove_nodes_from(remove)
     pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
 
-def markov(graph,plot = False):
+def markov(graph, plot=False):
     matrix = nx.to_scipy_sparse_matrix(graph) #Will generate an adjacency matrix from the graph
     inflation_values = []
     modularity_values = []
@@ -139,18 +126,26 @@ def markov(graph,plot = False):
         inflation_values.append(inflation)
         modularity_values.append(Q)
     d = {"Inflation":inflation_values,"Modularity":modularity_values}
-    df = pd.DataFrame(d,columns=["Inflation","Modularity"]) #Make a df of the inflation and modularity values
+    df = pd.DataFrame(d, columns=["Inflation","Modularity"]) #Make a df of the inflation and modularity values
     column = df["Modularity"]
     max_index = column.idxmax()
     optimal_inflation = df["Inflation"].iloc[max_index]
-    mc_results = mc.run_mcl(matrix,inflation = optimal_inflation)
+    mc_results = mc.run_mcl(matrix,inflation=optimal_inflation)
     mc_clusters = mc.get_clusters(mc_results)
     if plot:
         numnodes = graph.number_of_nodes()
         positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
-        mc.draw_graph(matrix,mc_clusters,pos = positions,node_size = 100,with_labels = True,edge_color = 'silver')
-    return df,mc_results,mc_clusters
+        mc.draw_graph(matrix,mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
+    return df, mc_clusters
 
+def grab_color_attributes(cluster_list, node_dict):
+    color_list = [color for color in sns.color_palette('colorblind', len(cluster_list))]
+    color_dict = {}
+    for i in range(0,len(cluster_list)):
+        for j in cluster_list[i]:
+            color_dict[node_dict[j]] = color_list[i]
+    color_dict_sorted = {area:color for area, color in sorted(color_dict.items(), key=lambda ele: ele[0])}
+    return color_dict_sorted
 
 def grab_attributes(graph):
     deg = nx.degree_centrality(graph)
@@ -161,7 +156,7 @@ def grab_attributes(graph):
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
     return deg_sort, between_sort, eig_sort
 
-def graph_network(G):
+def graph_network(G, color_list):
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
     deg = G.degree()
@@ -169,7 +164,7 @@ def graph_network(G):
     pos = nx.spring_layout(G, k=0.5, seed=3847897236)
     fig, ax = plt.subplots(figsize=(20, 15))
     nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=edge_colors)
-    nx.draw_networkx_nodes(G, pos=pos, node_size=node_sizes)
+    nx.draw_networkx_nodes(G, pos=pos, node_size=node_sizes, node_color=color_list)
     nx.draw_networkx_labels(G, pos=pos)
     ax.margins(0.1, 0.05)
     fig.tight_layout()
@@ -177,11 +172,29 @@ def graph_network(G):
     plt.axis('off')
     return
 
+def get_ordered_degree_list(G):
+    degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
+    return degree_ordered
+
+def in_silico_deletion(G, plot=False):
+    degree_list = [degree for degree in dict(G.degree).values()]
+    og_global_eff = nx.global_efficiency(G)
+    delta_global_eff = [abs(nx.global_efficiency(nx.from_pandas_adjacency(disruptPropagate(G, node))) - og_global_eff) for node in list(G.nodes())]
+    degree_list_const = sm.tools.add_constant(degree_list)
+    my_model = sm.OLS(delta_global_eff, degree_list_const).fit()
+    print(my_model.summary())
+    if plot:
+        sns.set()
+        fig, ax = plt.subplots()
+        plt.scatter(degree_list, delta_global_eff)
+        abline_plot(model_results=my_model, ax=ax)
+    return delta_global_eff
+
   
 # this is the disruption propagation model from Vetere et al. 2018
-def disruptPropagate(G, target, nodeNames):
-    G = pd.DataFrame(G, index=list(nodeNames.values()), columns=list(nodeNames.values()))  # create df with node names
-    # keep track of negative weights, create a "negs" matrix that encodes where negative correlations were in the
+def disruptPropagate(G, target):
+    G = nx.to_pandas_adjacency(G)  # create df with node names
+    # keep track of negative weights, create a "negs" matrix that encodes where negative  correlations were in the
     # correlation matrix
     Negs = G
     Negs = np.where((Negs < 0), -1, Negs)
@@ -235,3 +248,14 @@ def disruptPropagate(G, target, nodeNames):
 
     return finalMat
 
+# THIS IS FOR TEST PURPOSES ONLY
+file = '/Users/ryansenne/PycharmProjects/networkx/ChR2_Large_Network.csv'
+file2 = '/Users/ryansenne/PycharmProjects/networkx/Control_Large_Network.csv'
+allen_groups = pd.read_csv('/Users/ryansenne/PycharmProjects/networkx/ROIS.csv')
+
+test_data, test_nodes = loadData(file2)
+rvals, p, p_adj, rej = corrMatrix(test_data)
+threshold_matrix = significanceCheck(p_adj, rvals, 0.001, names=test_nodes, include_Negs=False)
+G, pos = networx(threshold_matrix, test_nodes)
+# my_del = in_silico_deletion(G, plot=True)
+my_list = get_ordered_degree_list(G)
