@@ -3,21 +3,22 @@ this project was inspired and adapted from work done by cesar coelho and gisella
 we thank them for their kind support throughout this process"""
 # author:ryan senne/ramirez group
 
+import random
+
+import markov_clustering as mc
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pandas as pd
+import scipy.cluster.hierarchy as sch
+import scipy.special as sc
+import seaborn as sns
+import statsmodels.api as sm
 # import necessary libraries
 from numpy.random import random
-import networkx as nx
-import pandas as pd
-import numpy as np
-import scipy.special as sc
-from statsmodels.sandbox.stats.multicomp import multipletests
-import statsmodels.api as sm
-import seaborn as sns
-import scipy.cluster.hierarchy as sch
 from sklearn.cluster import AgglomerativeClustering
 from statsmodels.graphics.regressionplots import abline_plot
-import matplotlib.pyplot as plt
-import markov_clustering as mc
-import random
+from statsmodels.sandbox.stats.multicomp import multipletests
 
 
 # simple function for loading our csv file
@@ -33,8 +34,8 @@ def loadData(data):
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
 def corrMatrix(data):
-    rVal = np.corrcoef(data, rowvar=False) # calculate pearson coefficients
-    rVal[np.isnan(rVal)] = 0 # Will make all NaN values into zero
+    rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
+    rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
     rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
     df = data.shape[1] - 2  # calculate degrees of freedom
     ts = rf * rf * (df / (1 - rf * rf))  # calculate t's
@@ -44,8 +45,8 @@ def corrMatrix(data):
     p[np.triu_indices(p.shape[0], 1)] = pf
     p[np.tril_indices(p.shape[0], -1)] = p.T[np.tril_indices(p.shape[0], -1)]
     p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
-    #Multiple comparison of p values using Bonferroni correction
-    rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha = 0.05, method= 'bonferroni', is_sorted = True)
+    # Multiple comparison of p values using Bonferroni correction
+    rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
     return rVal, p, p_adjusted, alpha_corrected
 
 
@@ -67,30 +68,44 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
             sns.clustermap(pandas_matrix)
             return threshold_matrix, pandas_matrix
     else:
-            return threshold_matrix
-#         pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
-#         sns.color_palette("viridis", as_cmap=True)
-#         sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
-#         fig1 = plt.figure()
-#         sns.heatmap(pandas_matrix,cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
+        return threshold_matrix
 
 
-def hierarch_clust(threshold_matrix,nodes,allen_groups,plot=False):
-    #Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in cluster # across cuts
-    distances = [10,20,30,40,50,60]
+# pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+# sns.color_palette("viridis", as_cmap=True) sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',
+# metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10)) fig1 = plt.figure() sns.heatmap(pandas_matrix,
+# cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
+
+
+def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
+    # Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in
+    # cluster # across cuts
+    distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
     num_clusts = []
+    mods = []
     for i in distances:
-        hc = AgglomerativeClustering(n_clusters=None,linkage='ward',distance_threshold=i,compute_distances=True,compute_full_tree=True)
-        org_hc = hc.fit_predict(threshold_matrix) # Here is actually where you make the rules for the clustering
-        print(np.bincount(org_hc)) #output to indicate how many nodes fall in each clustes
+        hc = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=i, compute_distances=True,
+                                     compute_full_tree=True)
+        org_hc = hc.fit_predict(threshold_matrix)
+        mapped_nodes = {node: cluster for node, cluster in zip(nodes.values(), org_hc)}
+        sorted_mapped_nodes = {node: cluster for node, cluster in
+                               sorted(mapped_nodes.items(), key=lambda item: item[1])}
+        list_of_node_sets = [{node for node, cluster in sorted_mapped_nodes.items() if cluster == j} for j in
+                             range(0, max(sorted_mapped_nodes.values()) + 1)]
+        mods.append(nx.algorithms.community.modularity(G, list_of_node_sets))
+        print(org_hc)  # Here is actually where you make the rules for the clustering
+        print(np.bincount(org_hc))  # output to indicate how many nodes fall in each clusters
         num_clusters = len(np.unique(org_hc))
         num_clusts.append(num_clusters)
-    d = {"Distance":distances,"Number of Clusters":num_clusts}
-    df_clusts = pd.DataFrame(d,columns=["Distance","Number of Clusters"])
-    #Next, perform the HC on the distance that is "halfway" down the dendrogram
-    hc_2 = AgglomerativeClustering(n_clusters=None,linkage='ward',distance_threshold=40,compute_distances=True,compute_full_tree=True)
+    modularities = {dist: mod for dist, mod in zip(distances, mods)}
+    max_mod_dist = max(modularities, key=modularities.get)
+    d = {"Distance": distances, "Number of Clusters": num_clusts}
+    df_clusts = pd.DataFrame(d, columns=["Distance", "Number of Clusters"])
+    # Next, perform the HC on the distance that is "halfway" down the dendrogram
+    hc_2 = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=max_mod_dist, compute_distances=True,
+                                   compute_full_tree=True)
     org_hc_2 = hc_2.fit_predict(threshold_matrix)
-    nodes_items = nodes.items() #Now we conduct some tomfoolery to identify clusters in nodes
+    nodes_items = nodes.items()  # Now we conduct some tomfoolery to identify clusters in nodes
     nodes_list = list(nodes_items)
     nodes_df = pd.DataFrame(nodes_list)
     nodes_df["cluster"] = org_hc_2
@@ -103,10 +118,10 @@ def hierarch_clust(threshold_matrix,nodes,allen_groups,plot=False):
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data,nodeLabel):
-    #corr_data = np.arctanh(corr_data) # Another Fisher transformation
-    #will zero out the weaker edge connections and also not look at negative edge connections
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph) #use the updated corr_data to make a graph
+def networx(corr_data, nodeLabel):
+    # corr_data = np.arctanh(corr_data) # Another Fisher transformation
+    # will zero out the weaker edge connections and also not look at negative edge connections
+    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
     remove = [node for node, degree in graph.degree() if degree < 1]
     graph.remove_nodes_from(remove)
@@ -116,36 +131,38 @@ def networx(corr_data,nodeLabel):
 
 
 def markov(graph, plot=False):
-    matrix = nx.to_scipy_sparse_matrix(graph) #Will generate an adjacency matrix from the graph
+    matrix = nx.to_scipy_sparse_matrix(graph)  # Will generate an adjacency matrix from the graph
     inflation_values = []
     modularity_values = []
-    for inflation in [i /10 for i in range(15,135,5)]:
+    for inflation in [i / 10 for i in range(15, 135, 5)]:
         result = mc.run_mcl(matrix, inflation=inflation)
         clusters = mc.get_clusters(result)
         Q = mc.modularity(matrix=result, clusters=clusters)
         inflation_values.append(inflation)
         modularity_values.append(Q)
-    d = {"Inflation":inflation_values,"Modularity":modularity_values}
-    df = pd.DataFrame(d, columns=["Inflation","Modularity"]) #Make a df of the inflation and modularity values
+    d = {"Inflation": inflation_values, "Modularity": modularity_values}
+    df = pd.DataFrame(d, columns=["Inflation", "Modularity"])  # Make a df of the inflation and modularity values
     column = df["Modularity"]
     max_index = column.idxmax()
     optimal_inflation = df["Inflation"].iloc[max_index]
-    mc_results = mc.run_mcl(matrix,inflation=optimal_inflation)
+    mc_results = mc.run_mcl(matrix, inflation=optimal_inflation)
     mc_clusters = mc.get_clusters(mc_results)
     if plot:
         numnodes = graph.number_of_nodes()
         positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
-        mc.draw_graph(matrix,mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
+        mc.draw_graph(matrix, mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
     return df, mc_clusters
+
 
 def grab_color_attributes(cluster_list, node_dict):
     color_list = [color for color in sns.color_palette('colorblind', len(cluster_list))]
     color_dict = {}
-    for i in range(0,len(cluster_list)):
+    for i in range(0, len(cluster_list)):
         for j in cluster_list[i]:
             color_dict[node_dict[j]] = color_list[i]
-    color_dict_sorted = {area:color for area, color in sorted(color_dict.items(), key=lambda ele: ele[0])}
+    color_dict_sorted = {area: color for area, color in sorted(color_dict.items(), key=lambda ele: ele[0])}
     return color_dict_sorted
+
 
 def grab_attributes(graph):
     deg = nx.degree_centrality(graph)
@@ -155,6 +172,7 @@ def grab_attributes(graph):
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[1])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
     return deg_sort, between_sort, eig_sort
+
 
 def graph_network(G, color_list):
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
@@ -172,14 +190,17 @@ def graph_network(G, color_list):
     plt.axis('off')
     return
 
+
 def get_ordered_degree_list(G):
     degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
     return degree_ordered
 
+
 def in_silico_deletion(G, plot=False):
     degree_list = [degree for degree in dict(G.degree).values()]
     og_global_eff = nx.global_efficiency(G)
-    delta_global_eff = [abs(nx.global_efficiency(nx.from_pandas_adjacency(disruptPropagate(G, node))) - og_global_eff) for node in list(G.nodes())]
+    delta_global_eff = [abs(nx.global_efficiency(nx.from_pandas_adjacency(disruptPropagate(G, node))) - og_global_eff)
+                        for node in list(G.nodes())]
     degree_list_const = sm.tools.add_constant(degree_list)
     my_model = sm.OLS(delta_global_eff, degree_list_const).fit()
     print(my_model.summary())
@@ -190,7 +211,7 @@ def in_silico_deletion(G, plot=False):
         abline_plot(model_results=my_model, ax=ax)
     return delta_global_eff
 
-  
+
 # this is the disruption propagation model from Vetere et al. 2018
 def disruptPropagate(G, target):
     G = nx.to_pandas_adjacency(G)  # create df with node names
@@ -248,10 +269,11 @@ def disruptPropagate(G, target):
 
     return finalMat
 
+
 # THIS IS FOR TEST PURPOSES ONLY
-file = '/Users/ryansenne/PycharmProjects/networkx/ChR2_Large_Network.csv'
-file2 = '/Users/ryansenne/PycharmProjects/networkx/Control_Large_Network.csv'
-allen_groups = pd.read_csv('/Users/ryansenne/PycharmProjects/networkx/ROIS.csv')
+file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
+file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
+allen_groups = pd.read_csv('/home/ryansenne/PycharmProjects/Networks/ROIs.csv')
 
 test_data, test_nodes = loadData(file2)
 rvals, p, p_adj, rej = corrMatrix(test_data)
@@ -259,3 +281,4 @@ threshold_matrix = significanceCheck(p_adj, rvals, 0.001, names=test_nodes, incl
 G, pos = networx(threshold_matrix, test_nodes)
 # my_del = in_silico_deletion(G, plot=True)
 my_list = get_ordered_degree_list(G)
+clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])
