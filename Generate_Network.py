@@ -16,8 +16,10 @@ ChR2_rVal,ChR2_p_raw,ChR2_p_adj, ChR2_alpha = corrMatrix(ChR2_raw_data)
 Control_rVal,Control_p_raw,Control_p_adj, Control_alpha = corrMatrix(Control_raw_data)
 
 #After getting the rVal and adjust p-values, then run the function to check for significance and generate the corr matrices with all non-zero values
-ChR2_threshold_matrix = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha = ChR2_alpha, threshold = 0.001, names=ChR2_nodes, plot = False, include_Negs=True)
-Control_threshold_matrix = significanceCheck(Control_p_adj,Control_rVal,alpha = Control_alpha, threshold = 0.001, names=Control_nodes,plot = False,include_Negs = True)
+ChR2_threshold_matrix,ChR2_pandas_matrix = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha = ChR2_alpha, threshold = 0.001,
+                                                             names=ChR2_nodes, plot = True, include_Negs=True, Anatomy=ROIs)
+Control_threshold_matrix,Control_pandas_matrix = significanceCheck(Control_p_adj,Control_rVal,alpha = Control_alpha, threshold = 0.001,
+                                                                   names=Control_nodes,plot = True,include_Negs = True, Anatomy=ROIs)
 
 #Run some hierarchical clustering
 ChR2_hc_clusters,ChR2_hc_df,ChR2_components = hierarch_clust(ChR2_threshold_matrix,ChR2_nodes,Allen_Groups,plot = False)

@@ -22,6 +22,8 @@ import pickle as pkl
 
 # simple function for loading our csv file
 def loadData(data):
+    data = pd.read_csv(data)
+    data = data.apply(lambda x: x.fillna(x.mean()), axis=0)
     node_names = data.columns.to_list()
     node_number = list(item for item in range(0, len(node_names)))
     nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
@@ -62,7 +64,7 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
             pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
             if Anatomy:
                 #Create sorted list from the unpickled dictionary
-                sorted_dict = dict(sorted(ROIs_dict.items(),key=lambda item: item[1]))
+                sorted_dict = dict(sorted(Anatomy.items(),key=lambda item: item[1]))
                 list_for_sort = list(sorted_dict.keys())
                 
                 allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort] #new pandas matrix that is organized by allen
@@ -276,7 +278,7 @@ def disruptPropagate(G, target):
     return finalMat
 
 
-# THIS IS FOR TEST PURPOSES ONLY
+''''# THIS IS FOR TEST PURPOSES ONLY
 file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
 file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
 allen_groups = pd.read_csv('/home/ryansenne/PycharmProjects/Networks/ROIs.csv')
@@ -287,4 +289,4 @@ threshold_matrix = significanceCheck(p_adj, rvals, 0.001, names=test_nodes, incl
 G, pos = networx(threshold_matrix, test_nodes)
 # my_del = in_silico_deletion(G, plot=True)
 my_list = get_ordered_degree_list(G)
-clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])
+clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])'''
