@@ -3,8 +3,8 @@ this project was inspired and adapted from work done by cesar coelho and gisella
 we thank them for their kind support throughout this process"""
 # author:ryan senne/ramirez group
 
+# import necessary libraries
 import random
-
 import markov_clustering as mc
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -14,17 +14,14 @@ import scipy.cluster.hierarchy as sch
 import scipy.special as sc
 import seaborn as sns
 import statsmodels.api as sm
-# import necessary libraries
 from numpy.random import random
 from sklearn.cluster import AgglomerativeClustering
 from statsmodels.graphics.regressionplots import abline_plot
 from statsmodels.sandbox.stats.multicomp import multipletests
-
+import pickle as pkl
 
 # simple function for loading our csv file
 def loadData(data):
-    data = pd.read_csv(data)
-    data = data.apply(lambda x: x.fillna(x.mean()), axis=0)
     node_names = data.columns.to_list()
     node_number = list(item for item in range(0, len(node_names)))
     nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
@@ -51,7 +48,7 @@ def corrMatrix(data):
 
 
 # using this function we will threshold based off of p-values previously calculated
-def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True):
+def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
     p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
     p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
     if not include_Negs:
@@ -63,19 +60,28 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     if plot:
         if names:
             pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+            if Anatomy:
+                #Create sorted list from the unpickled dictionary
+                sorted_dict = dict(sorted(ROIs_dict.items(),key=lambda item: item[1]))
+                list_for_sort = list(sorted_dict.keys())
+                
+                allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort] #new pandas matrix that is organized by allen
+                
+                #plot a different correlation matrix
+                allens = list(sorted_dict.values())
+                allens_unique = np.unique(allens)
+                color_list = [color for color in sns.color_palette('rainbow',n_colors = len(allens))]
+                color_ref = dict(zip(map(str, allens),color_list))
+                allen_colors = pd.Series(allens,index = allen_pandas.columns).map(color_ref)
+                
+                sns.clustermap(allen_pandas, cmap='viridis', row_colors=allen_colors, col_colors=allen_colors,
+                row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,figsize=(10,10))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-            sns.clustermap(pandas_matrix)
-            return threshold_matrix, pandas_matrix
+        sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10,10), cbar_pos=(.9,.9,.02,.10))
+        return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
-
-
-# pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
-# sns.color_palette("viridis", as_cmap=True) sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',
-# metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10)) fig1 = plt.figure() sns.heatmap(pandas_matrix,
-# cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
-
 
 def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     # Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in
