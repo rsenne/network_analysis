@@ -3,8 +3,8 @@ this project was inspired and adapted from work done by cesar coelho and gisella
 we thank them for their kind support throughout this process"""
 # author:ryan senne/ramirez group
 
+# import necessary libraries
 import random
-
 import markov_clustering as mc
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -14,7 +14,6 @@ import scipy.cluster.hierarchy as sch
 import scipy.special as sc
 import seaborn as sns
 import statsmodels.api as sm
-# import necessary libraries
 from numpy.random import random
 from sklearn.cluster import AgglomerativeClustering
 from statsmodels.graphics.regressionplots import abline_plot
@@ -174,16 +173,17 @@ def grab_attributes(graph):
     return deg_sort, between_sort, eig_sort
 
 
-def graph_network(G, color_list):
+def graph_network(G, color_list, pos_dict):
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
     deg = G.degree()
     node_sizes = [degree / np.mean(list(dict(deg).values())) * 1000 for degree in dict(deg).values()]
-    pos = nx.spring_layout(G, k=0.5, seed=3847897236)
+    # pos = nx.spring_layout(G, k=0.5, seed=3847897236)
+    # print(pos)
     fig, ax = plt.subplots(figsize=(20, 15))
-    nx.draw_networkx_edges(G, pos=pos, width=1, edge_color=edge_colors)
-    nx.draw_networkx_nodes(G, pos=pos, node_size=node_sizes, node_color=color_list)
-    nx.draw_networkx_labels(G, pos=pos)
+    nx.draw_networkx_edges(G, pos=pos_dict, width=1, edge_color=edge_colors, connectionstyle='arc3,rad=0.2')
+    nx.draw_networkx_nodes(G, pos=pos_dict, node_size=node_sizes, node_color=color_list, linewidths=1, edgecolors='black')
+    nx.draw_networkx_labels(G, pos=pos_dict)
     ax.margins(0.1, 0.05)
     fig.tight_layout()
     plt.show()
@@ -269,16 +269,53 @@ def disruptPropagate(G, target):
 
     return finalMat
 
+def get_position_data(cluster_list, node_names):
+    number_of_clusters = len(cluster_list)
+    nodes_list = [x for x in range(0, number_of_clusters)]
+    radii = [len(cluster_list[i]) for i in range(len(cluster_list))]
+    scaled_radii = [1.3 * np.log(node) for node in radii]
+    pos_graph = nx.Graph()
+    pos_graph.add_nodes_from(nodes_list)
+    pos = nx.circular_layout(pos_graph, scale=15, dim=2)
+    print(list(pos.values())[0][1])
+    num_of_nodes = [len(node) for node in cluster_list]
+    point_clouds = [get_point_cloud(radius, lens) for radius, lens in zip(scaled_radii, num_of_nodes)]
+    for i in range(len(point_clouds)):
+        for j in range(len(point_clouds[i])):
+            point_clouds[i][j][0] += pos[i][0]
+            point_clouds[i][j][1] += pos[i][1]
+    point_cloud_map = {cluster:pos_list for cluster,pos_list in enumerate(point_clouds)}
+    pos_dict = {}
+    for i in range(len(cluster_list)):
+        for j in range(len(cluster_list[i])):
+            print(cluster_list[i])
+            pos_dict.update({node_names[cluster_list[i][j]]:np.array(point_cloud_map[i][j])})
+    nx.rescale_layout_dict(pos_dict, 10)
+    return pos_dict
+
+def get_point_cloud(radius, k=0):
+    r = radius * np.sqrt(np.linspace(0, 1, k))
+    theta = (np.random.uniform(-1, 1, k) * 2 * np.pi)
+    point_cloud_x = r * np.cos(theta)
+    point_cloud_y = r * np.sin(theta)
+    point_cloud = [[x, y] for x, y in zip(point_cloud_x, point_cloud_y)]
+    return point_cloud
+
 
 # THIS IS FOR TEST PURPOSES ONLY
-file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
-file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
-allen_groups = pd.read_csv('/home/ryansenne/PycharmProjects/Networks/ROIs.csv')
+file = '/Users/ryansenne/PycharmProjects/networkx/ChR2_Large_Network.csv'
+file2 = '/Users/ryansenne/PycharmProjects/networkx/Control_Large_Network.csv'
+allen_groups = pd.read_csv('/Users/ryansenne/PycharmProjects/networkx/ROIs.csv')
 
 test_data, test_nodes = loadData(file2)
 rvals, p, p_adj, rej = corrMatrix(test_data)
 threshold_matrix = significanceCheck(p_adj, rvals, 0.001, names=test_nodes, include_Negs=False)
 G, pos = networx(threshold_matrix, test_nodes)
+df, mark_clust = markov(G)
+color_list = grab_color_attributes(mark_clust, test_nodes)
+pos_dict = get_position_data(mark_clust, test_nodes)
+graph_network(G, list(color_list.values()), pos_dict)
 # my_del = in_silico_deletion(G, plot=True)
 my_list = get_ordered_degree_list(G)
-clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])
+# clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])
+
