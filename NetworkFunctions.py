@@ -73,7 +73,7 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
                 #plot a different correlation matrix
                 allens = list(sorted_dict.values())
                 allens_unique = np.unique(allens)
-                color_list = [color for color in sns.color_palette('rainbow',n_colors = len(allens_unique))]
+                color_list = [color for color in sns.color_palette('Set3',n_colors = len(allens_unique))]
                 color_ref = dict(zip(map(str, allens_unique),color_list))
                 allen_colors = pd.Series(allens,index = allen_pandas.columns).map(color_ref)
 
