@@ -101,7 +101,8 @@ def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     d = {"Distance": distances, "Number of Clusters": num_clusts}
     df_clusts = pd.DataFrame(d, columns=["Distance", "Number of Clusters"])
     # Next, perform the HC on the distance that is "halfway" down the dendrogram
-    hc_2 = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=max_mod_dist, compute_distances=True,
+    hc_2 = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=max_mod_dist,
+                                   compute_distances=True,
                                    compute_full_tree=True)
     org_hc_2 = hc_2.fit_predict(threshold_matrix)
     nodes_items = nodes.items()  # Now we conduct some tomfoolery to identify clusters in nodes
@@ -182,7 +183,8 @@ def graph_network(G, color_list, pos_dict):
     # print(pos)
     fig, ax = plt.subplots(figsize=(20, 15))
     nx.draw_networkx_edges(G, pos=pos_dict, width=1, edge_color=edge_colors, connectionstyle='arc3,rad=0.2')
-    nx.draw_networkx_nodes(G, pos=pos_dict, node_size=node_sizes, node_color=color_list, linewidths=1, edgecolors='black')
+    nx.draw_networkx_nodes(G, pos=pos_dict, node_size=node_sizes, node_color=color_list, linewidths=1,
+                           edgecolors='black')
     nx.draw_networkx_labels(G, pos=pos_dict)
     ax.margins(0.1, 0.05)
     fig.tight_layout()
@@ -269,43 +271,51 @@ def disruptPropagate(G, target):
 
     return finalMat
 
+
 def get_position_data(cluster_list, node_names):
     number_of_clusters = len(cluster_list)
     nodes_list = [x for x in range(0, number_of_clusters)]
-    radii = [len(cluster_list[i]) for i in range(len(cluster_list))]
-    scaled_radii = [1.3 * np.log(node) for node in radii]
     pos_graph = nx.Graph()
     pos_graph.add_nodes_from(nodes_list)
-    pos = nx.circular_layout(pos_graph, scale=15, dim=2)
-    print(list(pos.values())[0][1])
+    pos = nx.circular_layout(pos_graph, scale=30, dim=2)
     num_of_nodes = [len(node) for node in cluster_list]
-    point_clouds = [get_point_cloud(radius, lens) for radius, lens in zip(scaled_radii, num_of_nodes)]
+    point_clouds = [get_point_cloud(lens) for lens in num_of_nodes]
     for i in range(len(point_clouds)):
         for j in range(len(point_clouds[i])):
             point_clouds[i][j][0] += pos[i][0]
             point_clouds[i][j][1] += pos[i][1]
-    point_cloud_map = {cluster:pos_list for cluster,pos_list in enumerate(point_clouds)}
+    point_cloud_map = {cluster: pos_list for cluster, pos_list in enumerate(point_clouds)}
     pos_dict = {}
     for i in range(len(cluster_list)):
         for j in range(len(cluster_list[i])):
-            print(cluster_list[i])
-            pos_dict.update({node_names[cluster_list[i][j]]:np.array(point_cloud_map[i][j])})
+            pos_dict.update({node_names[cluster_list[i][j]]: np.array(point_cloud_map[i][j])})
     nx.rescale_layout_dict(pos_dict, 10)
     return pos_dict
 
-def get_point_cloud(radius, k=0):
-    r = radius * np.sqrt(np.linspace(0, 1, k))
-    theta = (np.random.uniform(-1, 1, k) * 2 * np.pi)
-    point_cloud_x = r * np.cos(theta)
-    point_cloud_y = r * np.sin(theta)
+
+def sunflower_theta(n):
+    golden_ratio = ((1 + 5 ** 0.5) / 2) ** 2
+    return 2 * np.pi / golden_ratio * n
+
+
+def sunflower_r(n, c=1):
+    return c * (n ** 0.5)
+
+
+def get_point_cloud(k=0):
+    n = [i for i in range(1, k + 1)]
+    r = [sunflower_r(i) for i in n]
+    theta = [sunflower_theta(j) for j in n]
+    point_cloud_x = (r * np.cos(theta))
+    point_cloud_y = (r * np.sin(theta))
     point_cloud = [[x, y] for x, y in zip(point_cloud_x, point_cloud_y)]
     return point_cloud
 
 
 # THIS IS FOR TEST PURPOSES ONLY
-file = '/Users/ryansenne/PycharmProjects/networkx/ChR2_Large_Network.csv'
-file2 = '/Users/ryansenne/PycharmProjects/networkx/Control_Large_Network.csv'
-allen_groups = pd.read_csv('/Users/ryansenne/PycharmProjects/networkx/ROIs.csv')
+file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
+file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
+allen_groups = pd.read_csv('/home/ryansenne/PycharmProjects/Networks/ROIs.csv')
 
 test_data, test_nodes = loadData(file2)
 rvals, p, p_adj, rej = corrMatrix(test_data)
@@ -318,4 +328,3 @@ graph_network(G, list(color_list.values()), pos_dict)
 # my_del = in_silico_deletion(G, plot=True)
 my_list = get_ordered_degree_list(G)
 # clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])
-
