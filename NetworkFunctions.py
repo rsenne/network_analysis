@@ -19,6 +19,7 @@ from sklearn.cluster import AgglomerativeClustering
 from statsmodels.graphics.regressionplots import abline_plot
 from statsmodels.sandbox.stats.multicomp import multipletests
 import pickle as pkl
+import matplotlib.patches as mpatches
 
 # simple function for loading our csv file
 def loadData(data):
@@ -66,21 +67,40 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
                 #Create sorted list from the unpickled dictionary
                 sorted_dict = dict(sorted(Anatomy.items(),key=lambda item: item[1]))
                 list_for_sort = list(sorted_dict.keys())
-                
+
                 allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort] #new pandas matrix that is organized by allen
-                
+
                 #plot a different correlation matrix
                 allens = list(sorted_dict.values())
                 allens_unique = np.unique(allens)
-                color_list = [color for color in sns.color_palette('rainbow',n_colors = len(allens))]
-                color_ref = dict(zip(map(str, allens),color_list))
+                color_list = [color for color in sns.color_palette('rainbow',n_colors = len(allens_unique))]
+                color_ref = dict(zip(map(str, allens_unique),color_list))
                 allen_colors = pd.Series(allens,index = allen_pandas.columns).map(color_ref)
-                
+
+                #create legends for Allen groups with the colors from the color_ref dictionary
+                cerebellum = mpatches.Patch(color=color_list[0],label='Cerebellum')
+                cort_plate = mpatches.Patch(color=color_list[1],label='Cortical Plate')
+                cort_subplate = mpatches.Patch(color=color_list[2],label='Cortical Subplate')
+                hypothalamus = mpatches.Patch(color=color_list[3],label='Hypothalamus')
+                medulla = mpatches.Patch(color=color_list[4],label='Medulla')
+                midbrain = mpatches.Patch(color=color_list[5],label='Midbrain')
+                pallidum = mpatches.Patch(color=color_list[6],label='Pallidum')
+                pons = mpatches.Patch(color=color_list[7],label='Pons')
+                striatum = mpatches.Patch(color=color_list[8],label='Striatum')
+                thal = mpatches.Patch(color=color_list[9],label='Thalamus')
+
+                # plot the new corrleation matrix
+                plt.figure(1)
                 sns.clustermap(allen_pandas, cmap='viridis', row_colors=allen_colors, col_colors=allen_colors,
-                row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,figsize=(10,10))
+                               row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
+                               figsize=(10, 10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
+                plt.legend(handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla,
+                                    midbrain, pallidum, pons, striatum, thal],bbox_to_anchor =(5.0,1.6))
+
+
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10,10), cbar_pos=(.9,.9,.02,.10))
+        fig = sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10,10), cbar_pos=(.9,.9,.02,.10))
         return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
