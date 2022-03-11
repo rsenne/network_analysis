@@ -96,8 +96,6 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
                                figsize=(10, 10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
                 plt.legend(handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla,
                                     midbrain, pallidum, pons, striatum, thal],bbox_to_anchor =(5.0,1.6))
-
-
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
         fig = sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10,10), cbar_pos=(.9,.9,.02,.10))
@@ -105,16 +103,32 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     else:
         return threshold_matrix
 
-def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
-    # Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in
+
+# we will create our undirected network graphs based on our matrices
+def networx(corr_data, nodeLabel):
+    # corr_data = np.arctanh(corr_data) # Another Fisher transformation
+    # will zero out the weaker edge connections and also not look at negative edge connections
+    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
+    graph = nx.relabel_nodes(graph, nodeLabel)
+    remove = [node for node, degree in graph.degree() if degree < 1]
+    graph.remove_nodes_from(remove)
+    pos = nx.spring_layout(graph)
+    nx.set_node_attributes(graph, pos, name='pos')
+    return graph, pos
+
+
+def hierarch_clust(G, nodes, allen_groups, plot=False):
+    #Create the adjacency matrix from the imported graph
+    adj_array = nx.to_numpy_array(G)
     # cluster # across cuts
-    distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
+    distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65] #list of distances to cut along the dendrogram
     num_clusts = []
     mods = []
+    #create a for loop to iterate through the distances with HC and append to the two empty lists above
     for i in distances:
         hc = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=i, compute_distances=True,
                                      compute_full_tree=True)
-        org_hc = hc.fit_predict(threshold_matrix)
+        org_hc = hc.fit_predict(adj_array)
         mapped_nodes = {node: cluster for node, cluster in zip(nodes.values(), org_hc)}
         sorted_mapped_nodes = {node: cluster for node, cluster in
                                sorted(mapped_nodes.items(), key=lambda item: item[1])}
@@ -132,30 +146,16 @@ def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     # Next, perform the HC on the distance that is "halfway" down the dendrogram
     hc_2 = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=max_mod_dist, compute_distances=True,
                                    compute_full_tree=True)
-    org_hc_2 = hc_2.fit_predict(threshold_matrix)
+    org_hc_2 = hc_2.fit_predict(adj_array)
     nodes_items = nodes.items()  # Now we conduct some tomfoolery to identify clusters in nodes
     nodes_list = list(nodes_items)
     nodes_df = pd.DataFrame(nodes_list)
     nodes_df["cluster"] = org_hc_2
     nodes_df["Allen Group Name"] = allen_groups
     if plot:
-        fig2 = plt.figure()
-        sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
-        fig3 = plt.figure()
+        plt.figure(1)
+        sch.dendrogram(sch.linkage(adj_array, method='ward'))
     return df_clusts, nodes_df
-
-
-# we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel):
-    # corr_data = np.arctanh(corr_data) # Another Fisher transformation
-    # will zero out the weaker edge connections and also not look at negative edge connections
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
-    graph = nx.relabel_nodes(graph, nodeLabel)
-    remove = [node for node, degree in graph.degree() if degree < 1]
-    graph.remove_nodes_from(remove)
-    pos = nx.spring_layout(graph)
-    nx.set_node_attributes(graph, pos, name='pos')
-    return graph, pos
 
 
 def markov(graph, plot=False):
@@ -181,6 +181,9 @@ def markov(graph, plot=False):
         mc.draw_graph(matrix, mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
     return df, mc_clusters
 
+def louvain(graph,plot=False):
+    
+
 
 def grab_color_attributes(cluster_list, node_dict):
     color_list = [color for color in sns.color_palette('colorblind', len(cluster_list))]
@@ -193,13 +196,17 @@ def grab_color_attributes(cluster_list, node_dict):
 
 
 def grab_attributes(graph):
+    #attributes for nodes
     deg = nx.degree_centrality(graph)
     between = nx.betweenness_centrality(graph)
     eig = nx.eigenvector_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[1])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[1])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
-    return deg_sort, between_sort, eig_sort
+    #attributes for the whole graph
+    avrg_clust_coeff = nx.average_clustering(graph,weight='weight')
+    global_eff = nx.global_efficiency(graph)
+    return deg_sort, between_sort, eig_sort,avrg_clust_coeff,global_eff
 
 
 def graph_network(G, color_list):
