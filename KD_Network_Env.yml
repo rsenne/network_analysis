@@ -1,5 +1,0 @@
-name: Data_Wrangling
-channels:
-  - defaults
-prefix: /opt/anaconda3/envs/Data_Wrangling
-

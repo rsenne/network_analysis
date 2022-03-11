@@ -18,7 +18,8 @@ from numpy.random import random
 from sklearn.cluster import AgglomerativeClustering
 from statsmodels.graphics.regressionplots import abline_plot
 from statsmodels.sandbox.stats.multicomp import multipletests
-
+import pickle as pkl
+import matplotlib.patches as mpatches
 
 # simple function for loading our csv file
 def loadData(data):
@@ -50,7 +51,7 @@ def corrMatrix(data):
 
 
 # using this function we will threshold based off of p-values previously calculated
-def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True):
+def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
     p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
     p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
     if not include_Negs:
@@ -62,30 +63,72 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     if plot:
         if names:
             pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+            if Anatomy:
+                #Create sorted list from the unpickled dictionary
+                sorted_dict = dict(sorted(Anatomy.items(),key=lambda item: item[1]))
+                list_for_sort = list(sorted_dict.keys())
+
+                allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort] #new pandas matrix that is organized by allen
+
+                #plot a different correlation matrix
+                allens = list(sorted_dict.values())
+                allens_unique = np.unique(allens)
+                color_list = [color for color in sns.color_palette('Set3',n_colors = len(allens_unique))]
+                color_ref = dict(zip(map(str, allens_unique),color_list))
+                allen_colors = pd.Series(allens,index = allen_pandas.columns).map(color_ref)
+
+                #create legends for Allen groups with the colors from the color_ref dictionary
+                cerebellum = mpatches.Patch(color=color_list[0],label='Cerebellum')
+                cort_plate = mpatches.Patch(color=color_list[1],label='Cortical Plate')
+                cort_subplate = mpatches.Patch(color=color_list[2],label='Cortical Subplate')
+                hypothalamus = mpatches.Patch(color=color_list[3],label='Hypothalamus')
+                medulla = mpatches.Patch(color=color_list[4],label='Medulla')
+                midbrain = mpatches.Patch(color=color_list[5],label='Midbrain')
+                pallidum = mpatches.Patch(color=color_list[6],label='Pallidum')
+                pons = mpatches.Patch(color=color_list[7],label='Pons')
+                striatum = mpatches.Patch(color=color_list[8],label='Striatum')
+                thal = mpatches.Patch(color=color_list[9],label='Thalamus')
+
+                # plot the new corrleation matrix
+                plt.figure(1)
+                sns.clustermap(allen_pandas, cmap='viridis', row_colors=allen_colors, col_colors=allen_colors,
+                               row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
+                               figsize=(10, 10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
+                plt.legend(handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla,
+                                    midbrain, pallidum, pons, striatum, thal],bbox_to_anchor =(5.0,1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-            sns.clustermap(pandas_matrix)
-            return threshold_matrix, pandas_matrix
+        fig = sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10,10), cbar_pos=(.9,.9,.02,.10))
+        return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
 
 
-# pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
-# sns.color_palette("viridis", as_cmap=True) sns.clustermap(pandas_matrix,cmap = "viridis",method='ward',
-# metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10)) fig1 = plt.figure() sns.heatmap(pandas_matrix,
-# cmap = "viridis",square=True,xticklabels=True,yticklabels=True)
+# we will create our undirected network graphs based on our matrices
+def networx(corr_data, nodeLabel):
+    # corr_data = np.arctanh(corr_data) # Another Fisher transformation
+    # will zero out the weaker edge connections and also not look at negative edge connections
+    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
+    graph = nx.relabel_nodes(graph, nodeLabel)
+    remove = [node for node, degree in graph.degree() if degree < 1]
+    graph.remove_nodes_from(remove)
+    pos = nx.spring_layout(graph)
+    nx.set_node_attributes(graph, pos, name='pos')
+    return graph, pos
 
 
-def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
-    # Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in
+def hierarch_clust(G, nodes, allen_groups, plot=False):
+    #Create the adjacency matrix from the imported graph
+    adj_array = nx.to_numpy_array(G)
     # cluster # across cuts
-    distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
+    distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65] #list of distances to cut along the dendrogram
     num_clusts = []
     mods = []
+    #create a for loop to iterate through the distances with HC and append to the two empty lists above
     for i in distances:
         hc = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=i, compute_distances=True,
                                      compute_full_tree=True)
-        org_hc = hc.fit_predict(threshold_matrix)
+        org_hc = hc.fit_predict(adj_array)
         mapped_nodes = {node: cluster for node, cluster in zip(nodes.values(), org_hc)}
         sorted_mapped_nodes = {node: cluster for node, cluster in
                                sorted(mapped_nodes.items(), key=lambda item: item[1])}
@@ -104,30 +147,16 @@ def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     hc_2 = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=max_mod_dist,
                                    compute_distances=True,
                                    compute_full_tree=True)
-    org_hc_2 = hc_2.fit_predict(threshold_matrix)
+    org_hc_2 = hc_2.fit_predict(adj_array)
     nodes_items = nodes.items()  # Now we conduct some tomfoolery to identify clusters in nodes
     nodes_list = list(nodes_items)
     nodes_df = pd.DataFrame(nodes_list)
     nodes_df["cluster"] = org_hc_2
     nodes_df["Allen Group Name"] = allen_groups
     if plot:
-        fig2 = plt.figure()
-        sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
-        fig3 = plt.figure()
+        plt.figure(1)
+        sch.dendrogram(sch.linkage(adj_array, method='ward'))
     return df_clusts, nodes_df
-
-
-# we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel):
-    # corr_data = np.arctanh(corr_data) # Another Fisher transformation
-    # will zero out the weaker edge connections and also not look at negative edge connections
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
-    graph = nx.relabel_nodes(graph, nodeLabel)
-    remove = [node for node, degree in graph.degree() if degree < 1]
-    graph.remove_nodes_from(remove)
-    pos = nx.spring_layout(graph)
-    nx.set_node_attributes(graph, pos, name='pos')
-    return graph, pos
 
 
 def markov(graph, plot=False):
@@ -153,6 +182,9 @@ def markov(graph, plot=False):
         mc.draw_graph(matrix, mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
     return df, mc_clusters
 
+def louvain(graph,plot=False):
+    
+
 
 def grab_color_attributes(cluster_list, node_dict):
     color_list = [color for color in sns.color_palette('colorblind', len(cluster_list))]
@@ -165,13 +197,17 @@ def grab_color_attributes(cluster_list, node_dict):
 
 
 def grab_attributes(graph):
+    #attributes for nodes
     deg = nx.degree_centrality(graph)
     between = nx.betweenness_centrality(graph)
     eig = nx.eigenvector_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[1])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[1])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
-    return deg_sort, between_sort, eig_sort
+    #attributes for the whole graph
+    avrg_clust_coeff = nx.average_clustering(graph,weight='weight')
+    global_eff = nx.global_efficiency(graph)
+    return deg_sort, between_sort, eig_sort,avrg_clust_coeff,global_eff
 
 
 def graph_network(G, color_list, pos_dict):
@@ -271,7 +307,6 @@ def disruptPropagate(G, target):
 
     return finalMat
 
-
 def get_position_data(cluster_list, node_names):
     number_of_clusters = len(cluster_list)
     nodes_list = [x for x in range(0, number_of_clusters)]
@@ -313,6 +348,7 @@ def get_point_cloud(k=0):
 
 
 # THIS IS FOR TEST PURPOSES ONLY
+
 file = '/home/ryansenne/PycharmProjects/Networks/ChR2_Large_Network.csv'
 file2 = '/home/ryansenne/PycharmProjects/Networks/Control_Large_Network.csv'
 allen_groups = pd.read_csv('/home/ryansenne/PycharmProjects/Networks/ROIs.csv')
@@ -327,4 +363,5 @@ pos_dict = get_position_data(mark_clust, test_nodes)
 graph_network(G, list(color_list.values()), pos_dict)
 # my_del = in_silico_deletion(G, plot=True)
 my_list = get_ordered_degree_list(G)
+clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])'''
 # clust, result = hierarch_clust(threshold_matrix, test_nodes, allen_groups['Allen Group Name'])
