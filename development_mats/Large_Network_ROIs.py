@@ -4,6 +4,7 @@
 #Import libraries
 import pandas as pd
 import os
+import pickle as pkl
 
 #Get the csv files and concatenate only the three columns you need in the analysis
 #Yes Ryan, I know this is still a for-loop isntead of a list comp so bite me
@@ -104,13 +105,21 @@ Control.columns = Control.columns.get_level_values(1)
 Control.reset_index(drop = True, inplace = True)
 
 #Here are the ROIs by Allen Brain Group that we want to organize
-ROIs = pd.read_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ROIs.csv")
-ROIs = ROIs.loc[:,["Abbreviation","Allen Group Name"]].sort_values("Allen Group Name").set_index("Abbreviation").T
+ROIs = pd.read_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ROIs.csv").loc[:,["Abbreviation","Allen Group Name"]]
+ROIs_dict = dict(ROIs.values)
+
+#Picking the dictionary
+with open('Allen_Areas_dict.pickle','wb') as f:
+    pkl.dump(ROIs_dict,f)
+
+#Do not need any of this fluff, this is only for organizing the final .csv files based on Allen Anatomy
+'''
+ROIs = ROIs.sort_values("Allen Group Name").set_index("Abbreviation").T
 cols = ROIs.columns.tolist()
 
 #Need to reorganize the datframe by the index defined by our ROIs
 ChR2 = ChR2[cols]
-Control = Control[cols]
+Control = Control[cols]'''
 
 #Turn the final ChR2 and Control dfs into .csv files to send to Ryan
 ChR2.to_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ChR2/ChR2_Large_Network.csv", index = False)
