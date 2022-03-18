@@ -1,5 +1,6 @@
 import network_analysis as net_a
 import pandas as pd
+import networkx as nx
 
 # THIS IS FOR TEST PURPOSES ONLY
 file = '/home/ryansenne/PycharmProjects/Networks/csv_files/ChR2_Large_Network.csv'

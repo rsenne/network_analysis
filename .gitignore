@@ -1,7 +1,6 @@
 
 .idea/csv-plugin.xml
 *.xml
-*.xml
 ymaze.py
 y_maze_final
 *.html
@@ -14,9 +13,5 @@ ymaze.py
 .ipynb_checkpoints/test-checkpoint.ipynb
 test.py
 wholebrainTools.py
-wholebrainTools.py
 main.py
-wholebrainTools.py
-wholebrainTools.py
-wholebrainTools.py
 .DS_Store
