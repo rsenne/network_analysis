@@ -27,10 +27,10 @@ ChR2_graph, ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
 Control_graph, Control_pos = networx(Control_threshold_matrix,Control_nodes)
 
 #Run some hierarchical clustering
-ChR2_hc_clusters,ChR2_hc_df= hierarch_clust(ChR2_graph,ChR2_nodes,Allen_Groups,plot = False)
-Control_hc_clusters,Control_hc_df= hierarch_clust(Control_graph,Control_nodes,Allen_Groups,plot = False)
+ChR2_hc_clusters,ChR2_hc_df= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
+Control_hc_clusters,Control_hc_df= hierarch_clust(Control_graph,Control_nodes,ROIs.values(),plot = False)
 
-#Generate a quick plot for both groups showing cuts along the dendrogram
+#Generate a quick plot for both groups showing cuts along the HC dendrogram
 fig = plt.figure()
 ax1 = fig.add_subplot(111)
 ax1.scatter(ChR2_hc_clusters['Distance'],ChR2_hc_clusters['Number of Clusters'],c='b',label='ChR2')
