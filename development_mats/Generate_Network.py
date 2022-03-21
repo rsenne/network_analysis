@@ -1,8 +1,9 @@
 #Start by loading the functions from the referenced NetworkFunctions.py file
 run NetworkFunctions.py
+import pickle as pkl
 
 #Unpickle the ROI dictionary
-with open('Allen_Areas_dict.pickle','rb') as f:
+with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
 #ROIs = ROIs.sort_values("Allen Group Name").reset_index(drop = True)
@@ -16,8 +17,8 @@ ChR2_rVal,ChR2_p_raw,ChR2_p_adj, ChR2_alpha = corrMatrix(ChR2_raw_data)
 Control_rVal,Control_p_raw,Control_p_adj, Control_alpha = corrMatrix(Control_raw_data)
 
 #After getting the rVal and adjust p-values, then run the function to check for significance and generate the corr matrices with all non-zero values
-ChR2_threshold_matrix,ChR2_pandas_matrix = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha = ChR2_alpha, threshold = 0.001,
-                                                             names=ChR2_nodes, plot = True, include_Negs=True, Anatomy=ROIs)
+ChR2_threshold_matrix,ChR2_pandas_matrix = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha=ChR2_alpha, threshold = 0.001,
+                                                             names=ChR2_nodes, plot=True, include_Negs=True, Anatomy=ROIs)
 Control_threshold_matrix,Control_pandas_matrix = significanceCheck(Control_p_adj,Control_rVal,alpha = Control_alpha, threshold = 0.001,
                                                                    names=Control_nodes,plot = True,include_Negs = True, Anatomy=ROIs)
 

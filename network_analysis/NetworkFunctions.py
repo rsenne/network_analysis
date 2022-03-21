@@ -12,6 +12,7 @@ import pandas as pd
 import scipy.special as sc
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
+import matplotlib.patches as mpatches
 
 
 # simple function for loading our csv file
@@ -48,7 +49,7 @@ def corrMatrix(data):
 
 
 # using this function we will threshold based off of p-values previously calculated
-def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True):
+def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
     p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
     p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
     if not include_Negs:
@@ -59,11 +60,45 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     # create a heatmap of correlations if wanted
     if plot:
         if names:
-            pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
+            pandas_matrix = pd.DataFrame(threshold_matrix,index=list(names.values()),columns=list(names.values()))
+            if Anatomy:
+                #Create a sorted dictionary from the unpickled ROIs dictionary
+                sorted_dict = dict(sorted(Anatomy.items(),key=lambda item: item[1]))
+                list_for_sort = list(sorted_dict.keys())
+
+                #Reorganize the pandas_matrix to reflect the order of the Allen ROIs
+                allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort]
+
+                #Create color assignments for Allen ROIs
+                num_allens = list(sorted_dict.values())
+                allens_unique = np.unique(num_allens)
+                color_list = [color for color in sns.color_palette('Set3',n_colors=len(allens_unique))]
+                color_ref = dict(zip(map(str,allens_unique),color_list))
+                allen_colors = pd.Series(num_allens,index=allen_pandas.columns).map(color_ref)
+
+                #Create a legend for the Allen ROIs
+                cerebellum = mpatches.Patch(color=color_list[0],label='Cerebellum')
+                cort_plate = mpatches.Patch(color=color_list[1],label='Cortical Plate')
+                cort_subplate = mpatches.Patch(color=color_list[2],label='Cortical Subplate')
+                hypothalamus = mpatches.Patch(color=color_list[3],label='Hypothalamus')
+                medulla = mpatches.Patch(color=color_list[4],label='Medulla')
+                midbrain = mpatches.Patch(color=color_list[5],label='Midbrain')
+                pallidum = mpatches.Patch(color=color_list[6],label='Pallidum')
+                pons = mpatches.Patch(color=color_list[7],label='Pons')
+                striatum = mpatches.Patch(color=color_list[8],label='Striatum')
+                thalamus = mpatches.Patch(color=color_list[9],label='Thalamus')
+
+                #Plot the newly generated Allen ROI correlation maitrx
+                plt.figure()
+                sns.clustermap(allen_pandas,cmap='viridis',row_colors=allen_colors,col_colors=allen_colors,
+                               row_cluster=False,col_cluster=False,xticklabels=False,yticklabels=False,
+                               figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
+                plt.legend(handles=[cerebellum,cort_plate,cort_subplate,hypothalamus,medulla,midbrain,pallidum,pons,striatum,thalamus],
+                           bbox_to_anchor=(5.0,1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-            sns.clustermap(pandas_matrix)
-            return threshold_matrix, pandas_matrix
+        sns.clustermap(pandas_matrix,cmap='viridis',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
+        return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
 
