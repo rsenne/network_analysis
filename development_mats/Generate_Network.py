@@ -1,8 +1,5 @@
-#Start by loading the functions from the referenced NetworkFunctions.py file
-run NetworkFunctions.py
-import pickle as pkl
-
 #Unpickle the ROI dictionary
+import pickle as pkl
 with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
@@ -27,14 +24,14 @@ ChR2_graph, ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
 Control_graph, Control_pos = networx(Control_threshold_matrix,Control_nodes)
 
 #Run some hierarchical clustering
-ChR2_hc_clusters,ChR2_hc_df= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
-Control_hc_clusters,Control_hc_df= hierarch_clust(Control_graph,Control_nodes,ROIs.values(),plot = False)
+ChR2_hc_cuts_df,ChR2_hc_assigns,ChR2_hc_clusters= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
+Control_hc_cuts_df,Control_hc_assigns,Control_hc_clusters= hierarch_clust(Control_graph,Control_nodes,ROIs.values(),plot = False)
 
 #Generate a quick plot for both groups showing cuts along the HC dendrogram
 fig = plt.figure()
 ax1 = fig.add_subplot(111)
-ax1.scatter(ChR2_hc_clusters['Distance'],ChR2_hc_clusters['Number of Clusters'],c='b',label='ChR2')
-ax1.scatter(Control_hc_clusters['Distance'],Control_hc_clusters['Number of Clusters'],c='g',label='Control')
+ax1.scatter(ChR2_hc_cuts_df['Distance Cut'],ChR2_hc_cuts_df['Number of Clusters'],c='b',label='ChR2')
+ax1.scatter(Control_hc_cuts_df['Distance Cut'],Control_hc_cuts_df['Number of Clusters'],c='g',label='Control')
 plt.xlabel("Cut Distance Along Dendrogram")
 plt.ylabel("Number of Clusters")
 plt.legend(loc='upper right')
@@ -43,3 +40,6 @@ plt.legend(loc='upper right')
 ChR2_markov_df,ChR2_markov_clusters = markov(ChR2_graph,plot = False)
 Control_markov_df,Control_markov_clusters = markov(Control_graph,plot = False)
 
+#Run louvain clustering
+ChR2_lou_clust = louvain(ChR2_graph,ChR2_nodes)
+Control_lou_clust = louvain(Control_graph,Control_nodes)
