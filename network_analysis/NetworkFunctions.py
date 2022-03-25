@@ -14,6 +14,7 @@ import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
+from scipy.spatial.distance import cdist
 
 
 # simple function for loading our csv file
@@ -47,6 +48,13 @@ def corrMatrix(data):
     # Multiple comparison of p values using Bonferroni correction
     rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
     return rVal, p, p_adjusted, alpha_corrected
+
+
+#Will generate a euclidean distance matrix from the raw data
+def euclMatrix(data):
+    data = data.T
+    eucl_matrix = cdist(data,data,metric='euclidean')
+    return eucl_matrix
 
 
 # using this function we will threshold based off of p-values previously calculated
