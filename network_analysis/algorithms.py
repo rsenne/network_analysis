@@ -1,4 +1,5 @@
 import networkx as nx
+import networkx.algorithms.community as nx_comm
 import pandas as pd
 import numpy as np
 import markov_clustering as mc
@@ -105,9 +106,8 @@ def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     nodes_df["cluster"] = org_hc_2
     nodes_df["Allen Group Name"] = allen_groups
     if plot:
-        fig2 = plt.figure()
+        plt.figure()
         sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
-        fig3 = plt.figure()
     return df_clusts, nodes_df
 
 
@@ -133,6 +133,18 @@ def markov(graph, plot=False):
         positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
         mc.draw_graph(matrix, mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
     return df, mc_clusters
+
+
+def louvain(graph):
+    resolutions = [0.5,1.0,1.2,1.4,1.6,1.8,2.0]
+    lou_mod = []
+    for i in resolutions:
+        lou_clust = nx_comm.louvain_communities(graph,resolution=i)
+        lou_mod.append(nx_comm.modularity(graph,lou_clust))
+    lou_modularities = {res:mod for res, mod in zip(resolutions,lou_mod)}
+    max_res = max(lou_modularities,key=lou_modularities.get)
+    max_mod_lou_comm = nx_comm.louvain_communities(graph,resolution=max_res)
+    return max_mod_lou_comm
 
 
 def in_silico_deletion(G, plot=False):
