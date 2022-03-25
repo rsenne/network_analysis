@@ -1,5 +1,5 @@
 """this is a set of functions necessary for the creation of undirected c-Fos networks.
-this project was inspired and adapted from work done by cesar coelho and gisella vetere.
+this project was inspired and adapted from work done by Drs. Cesar Coelho, Anne Wheeler, and Gisella Vetere.
 we thank them for their kind support throughout this process"""
 # author:ryan senne/ramirez group
 
@@ -13,6 +13,7 @@ import scipy.special as sc
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
+from bct.algorithms import centrality
 
 
 # simple function for loading our csv file
@@ -124,6 +125,13 @@ def grab_attributes(graph):
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[1])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
     return deg_sort, between_sort, eig_sort
+
+
+def cluster_attributes(graph,communities):
+    adj_matrix = nx.to_numpy_matrix(graph) #Will create an adjacency matrix from the graph
+    WMDz = centrality.module_degree_zscore(adj_matrix,communities,flag=0) #calculate the WMDz
+    PC = centrality.participation_coef(adj_matrix,communities,'undirected')
+    return WMDz,PC
 
 
 def get_ordered_degree_list(G):

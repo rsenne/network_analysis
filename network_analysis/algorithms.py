@@ -71,22 +71,21 @@ def disruptPropagate(G, target):
     return finalMat
 
 
-def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
-    # Do some cute for-loop to examine a variety of distances to cut along the dendrogram and examine the changes in
-    # cluster # across cuts
+def hierarch_clust(graph, nodes, allen_groups, plot=False):
+    adj_matrix = nx.to_numpy_matrix(graph)
     distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
     num_clusts = []
     mods = []
     for i in distances:
         hc = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=i, compute_distances=True,
                                      compute_full_tree=True)
-        org_hc = hc.fit_predict(threshold_matrix)
+        org_hc = hc.fit_predict(adj_matrix)
         mapped_nodes = {node: cluster for node, cluster in zip(nodes.values(), org_hc)}
         sorted_mapped_nodes = {node: cluster for node, cluster in
                                sorted(mapped_nodes.items(), key=lambda item: item[1])}
         list_of_node_sets = [{node for node, cluster in sorted_mapped_nodes.items() if cluster == j} for j in
                              range(0, max(sorted_mapped_nodes.values()) + 1)]
-        mods.append(nx.algorithms.community.modularity(G, list_of_node_sets))
+        mods.append(nx.algorithms.community.modularity(graph, list_of_node_sets))
         print(org_hc)  # Here is actually where you make the rules for the clustering
         print(np.bincount(org_hc))  # output to indicate how many nodes fall in each clusters
         num_clusters = len(np.unique(org_hc))
@@ -99,7 +98,7 @@ def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     hc_2 = AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=max_mod_dist,
                                    compute_distances=True,
                                    compute_full_tree=True)
-    org_hc_2 = hc_2.fit_predict(threshold_matrix)
+    org_hc_2 = hc_2.fit_predict(adj_matrix)
     nodes_items = nodes.items()  # Now we conduct some tomfoolery to identify clusters in nodes
     nodes_list = list(nodes_items)
     nodes_df = pd.DataFrame(nodes_list)
@@ -107,7 +106,7 @@ def hierarch_clust(threshold_matrix, nodes, allen_groups, plot=False):
     nodes_df["Allen Group Name"] = allen_groups
     if plot:
         plt.figure()
-        sch.dendrogram(sch.linkage(threshold_matrix, method='ward'))
+        sch.dendrogram(sch.linkage(adj_matrix,method='ward',metric='euclidean'))
     return df_clusts, nodes_df
 
 
