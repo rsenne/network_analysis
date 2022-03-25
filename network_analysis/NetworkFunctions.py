@@ -114,8 +114,6 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data, nodeLabel):
-    # corr_data = np.arctanh(corr_data) # Another Fisher transformation
-    # will zero out the weaker edge connections and also not look at negative edge connections
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
     remove = [node for node, degree in graph.degree() if degree < 1]
