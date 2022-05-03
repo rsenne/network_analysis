@@ -85,7 +85,7 @@ def louvain(graph,nodes):
         lou_mod.append(nx_comm.modularity(graph,lou_clust))
     lou_modularities = {res:mod for res, mod in zip(resolutions,lou_mod)}
     max_res = max(lou_modularities,key=lou_modularities.get)
-    max_mod_lou_comm = nx_comm.louvain_communities(graph,resolution=max_res)
+    max_mod_lou_comm = nx_comm.louvain_communities(graph,resolution=max_res,randomize=True, seed=100)
     max_mod_lou_comm = [tuple(c) for c in max_mod_lou_comm]
     return max_mod_lou_comm
 
