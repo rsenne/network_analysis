@@ -134,7 +134,7 @@ def grab_node_attributes(graph):
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
     return deg_sort, between_sort, eig_sort,close_sort
 
-def node_attrs_to_csv(nodes,deg_sort,between_sort,eig_sort,close_sort):
+def node_attrs_to_csv(nodes,deg_sort,between_sort,eig_sort,close_sort,folder,var_name):
     ROI_index = list(nodes.values()) #Import the dictionary object with the nodes generated from the graph and make a list
 
     #Below is a combination of node attributes into one centralized dictionary
@@ -146,6 +146,7 @@ def node_attrs_to_csv(nodes,deg_sort,between_sort,eig_sort,close_sort):
     }
 
     node_df = pd.DataFrame(node_info,index=ROI_index,columns=node_info.keys())
+    node_df.to_csv(folder + '/' + var_name + '.csv')
     return node_df
 
 

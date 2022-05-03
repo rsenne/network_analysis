@@ -28,8 +28,11 @@ ChR2_node_degree,ChR2_node_eig,ChR2_node_between,ChR2_node_close = grab_node_att
 Control_node_degree,Control_node_eig,Control_node_between,Control_node_close = grab_node_attributes(Control_graph)
 
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
-ChR2_nodes_df = node_attrs_to_csv(ChR2_nodes,ChR2_node_degree,ChR2_node_between,ChR2_node_eig,ChR2_node_close)
-Control_nodes_df = node_attrs_to_csv(Control_nodes,Control_node_degree,Control_node_between,Control_node_eig,Control_node_close)
+ChR2_str_nodes = nameof(ChR2_nodes)
+ChR2_nodes_df= node_attrs_to_csv(ChR2_nodes,ChR2_node_degree,ChR2_node_between,ChR2_node_eig,ChR2_node_close,'/Users/kaitlyndorst/Desktop/Network_csv',ChR2_str_nodes)
+
+Control_str_nodes = nameof(Control_nodes)
+Control_nodes_df = node_attrs_to_csv(Control_nodes,Control_node_degree,Control_node_between,Control_node_eig,Control_node_close,'/Users/kaitlyndorst/Desktop/Network_csv',Control_str_nodes)
 
 #Run some hierarchical clustering
 ChR2_hc_cuts_df,ChR2_hc_assigns,ChR2_hc_clusters= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
