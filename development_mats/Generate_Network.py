@@ -23,6 +23,17 @@ Control_threshold_matrix,Control_pandas_matrix = significanceCheck(Control_p_adj
 ChR2_graph, ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
 Control_graph, Control_pos = networx(Control_threshold_matrix,Control_nodes)
 
+#Get the node attributes of the generated graphs
+ChR2_node_degree,ChR2_node_eig,ChR2_node_between,ChR2_node_close = grab_node_attributes(ChR2_graph)
+Control_node_degree,Control_node_eig,Control_node_between,Control_node_close = grab_node_attributes(Control_graph)
+
+#If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
+ChR2_str_nodes = nameof(ChR2_nodes)
+ChR2_nodes_df= node_attrs_to_csv(ChR2_nodes,ChR2_node_degree,ChR2_node_between,ChR2_node_eig,ChR2_node_close,'/Users/kaitlyndorst/Desktop/Network_csv',ChR2_str_nodes)
+
+Control_str_nodes = nameof(Control_nodes)
+Control_nodes_df = node_attrs_to_csv(Control_nodes,Control_node_degree,Control_node_between,Control_node_eig,Control_node_close,'/Users/kaitlyndorst/Desktop/Network_csv',Control_str_nodes)
+
 #Run some hierarchical clustering
 ChR2_hc_cuts_df,ChR2_hc_assigns,ChR2_hc_clusters= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
 Control_hc_cuts_df,Control_hc_assigns,Control_hc_clusters= hierarch_clust(Control_graph,Control_nodes,ROIs.values(),plot = False)
