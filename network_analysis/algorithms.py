@@ -13,6 +13,8 @@ from statsmodels.graphics.regressionplots import abline_plot
 from sklearn.cluster import AgglomerativeClustering
 
 
+
+
 def hierarch_clust(graph, nodes, allen_groups, plot=False):
     adj_matrix = nx.to_numpy_matrix(graph)
     distances = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
@@ -43,7 +45,7 @@ def hierarch_clust(graph, nodes, allen_groups, plot=False):
     clust_assigns["Allen Group Name"] = allen_groups
     clusters = set()
     for i in list(np.unique(org_hc_2)):
-        cluster = tuple(clust_assigns.loc[clust_assigns["Cluster Number"] ==i,"Node Number"].tolist())
+        cluster = tuple(clust_assigns.loc[clust_assigns["Cluster Number"]==i,"Node Number"].tolist())
         clusters.add(cluster)
     if plot:
         plt.figure()

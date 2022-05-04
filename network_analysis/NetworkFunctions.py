@@ -1,6 +1,8 @@
-"""this is a set of functions necessary for the creation of undirected c-Fos networks.
+"""
+this is a set of functions necessary for the creation of undirected c-Fos networks.
 this project was inspired and adapted from work done by Drs. Cesar Coelho, Anne Wheeler, and Gisella Vetere.
-we thank them for their kind support throughout this process"""
+we thank them for their kind support throughout this process
+"""
 # author:ryan senne/ramirez group
 
 # import necessary libraries
@@ -122,6 +124,12 @@ def networx(corr_data, nodeLabel):
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+def lazy_network_generator(data):
+    df, nodes = loadData(data)
+    rVal, p, p_adjusted, alpha_corrected = corrMatrix(df)
+    threshold_matrix = significanceCheck(p_adjusted, rVal, alpha=0.001, names=nodes)
+    G, pos = networx(threshold_matrix, nodes)
+    return G
 
 def grab_attributes(graph):
     deg = nx.degree_centrality(graph)
@@ -132,6 +140,39 @@ def grab_attributes(graph):
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[1])}
     return deg_sort, between_sort, eig_sort
 
+def findMyHubs(G):
+    
+    G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
+    nx.set_edge_attributes(G, values= G_distance_dict, name='distance') #sets the distance as an atribute to all nodes
+    
+    cluster_coefficient = nx.clustering(G, weight='weight')     #calculated different measures of importance
+    degree_cent = nx.degree_centrality(G)
+    eigen_cent = nx.eigenvector_centrality(G, max_iter=100000, weight='weight') 
+    betweenness = nx.betweenness_centrality(G, weight='distance', normalized=True)
+    closeness = nx.closeness_centrality(G, distance='distance')
+    degree = list(G.degree(G, weight='weight'))
+    communicability = nx.communicability_betweenness_centrality(G)
+
+    dict = {'eigen_cent': eigen_cent, 'betweenness': betweenness, 'closeness': closeness, 
+            'clustering':cluster_coefficient, 'degree_cent':degree_cent, 'communicability': communicability} 
+
+    Results = pd.DataFrame(dict)    #create a frame with all the measures of importance for every region
+    
+    #Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
+    #used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
+    #For each significant measure an ROI has add one in the score column, a score >= 2 is considered a hub node.
+    Results['score'] = 0
+    Results['score'] = np.where((Results['eigen_cent'] > Results.eigen_cent.quantile(0.80)), Results['score']+1, Results['score'])
+    Results['score'] = np.where((Results['eigen_cent'] < Results.eigen_cent.quantile(.20)), Results['score']+1, Results['score'])
+    Results['score'] = np.where((Results['betweenness'] >= Results.betweenness.quantile(0.80)), Results['score']+1, Results['score'])
+    Results['score'] = np.where((Results['clustering'] <= Results.clustering.quantile(.20)), Results['score']+1, Results['score'])
+    Results['score'] = np.where((Results['communicability'] >= Results.communicability.quantile(.80)), Results['score']+1, Results['score'])
+    
+    NonHubs =  Results[(Results['score'] < 2) ].index   #create an index of rois with a score of less than 2 in hubness
+    
+    Hubs = Results.drop(NonHubs, errors = 'ignore')    #create a new frame with only the important nodes/ take out rois in the prior index
+    
+    return Results, Hubs
 
 def cluster_attributes(graph,communities):
     adj_matrix = nx.to_numpy_matrix(graph) #Will create an adjacency matrix from the graph
@@ -143,3 +184,4 @@ def cluster_attributes(graph,communities):
 def get_ordered_degree_list(G):
     degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
     return degree_ordered
+

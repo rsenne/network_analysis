@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
@@ -13,13 +14,24 @@ def grab_color_attributes(cluster_list, node_dict):
     color_dict_sorted = {area: color for area, color in sorted(color_dict.items(), key=lambda ele: ele[0])}
     return color_dict_sorted
 
+def get_allen_colors(allen_rois):
+    allen_df = pd.read_csv(allen_rois)
+    allen_list = list(set(allen_df['Allen Group Name']))
+    allen_colors = [color for color in sns.color_palette('colorblind', len(allen_list))]
+    allen_color_dict = {group:color for group, color in zip(allen_list, allen_colors)}
+    allen_dict = {abbrev:name for abbrev,name in zip(allen_df['Abbreviation'], allen_df['Allen Group Name'])}
+    color_list = []
+    for area in allen_dict:
+        color_list.append(allen_color_dict[allen_dict[area]])
+    return color_list
+
 
 def sunflower_theta(n):
     golden_ratio = ((1 + 5 ** 0.5) / 2) ** 2
     return 2 * np.pi / golden_ratio * n
 
 
-def sunflower_r(n, c=1):
+def sunflower_r(n, c=1.5):
     return c * (n ** 0.5)
 
 
@@ -59,8 +71,6 @@ def graph_network(G, color_list, pos_dict):
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
     deg = G.degree()
     node_sizes = [degree / np.mean(list(dict(deg).values())) * 1000 for degree in dict(deg).values()]
-    # pos = nx.spring_layout(G, k=0.5, seed=3847897236)
-    # print(pos)
     fig, ax = plt.subplots(figsize=(20, 15))
     nx.draw_networkx_edges(G, pos=pos_dict, width=1, edge_color=edge_colors, connectionstyle='arc3,rad=0.2')
     nx.draw_networkx_nodes(G, pos=pos_dict, node_size=node_sizes, node_color=color_list, linewidths=1,
@@ -71,3 +81,6 @@ def graph_network(G, color_list, pos_dict):
     plt.show()
     plt.axis('off')
     return
+
+
+
