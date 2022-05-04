@@ -1,6 +1,8 @@
-"""this is a set of functions necessary for the creation of undirected c-Fos networks.
+"""
+this is a set of functions necessary for the creation of undirected c-Fos networks.
 this project was inspired and adapted from work done by Drs. Cesar Coelho, Anne Wheeler, and Gisella Vetere.
-we thank them for their kind support throughout this process"""
+we thank them for their kind support throughout this process
+"""
 # author:ryan senne/ramirez group
 
 # import necessary libraries
@@ -122,6 +124,12 @@ def networx(corr_data, nodeLabel):
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+def lazy_network_generator(data):
+    df, nodes = loadData(data)
+    rVal, p, p_adjusted, alpha_corrected = corrMatrix(df)
+    threshold_matrix = significanceCheck(p_adjusted, rVal, alpha=0.001, names=nodes)
+    G, pos = networx(threshold_matrix, nodes)
+    return G
 
 def grab_attributes(graph):
     deg = nx.degree_centrality(graph)
@@ -143,3 +151,4 @@ def cluster_attributes(graph,communities):
 def get_ordered_degree_list(G):
     degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
     return degree_ordered
+
