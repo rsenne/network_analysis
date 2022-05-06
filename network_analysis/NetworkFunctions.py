@@ -51,6 +51,12 @@ def corrMatrix(data):
     rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
     return rVal, p, p_adjusted, alpha_corrected
 
+def percentile(array, p):
+    num_obs = int(np.size(array, 0)**2*p)
+    crit_value = -np.sort(-array.flatten())[num_obs]
+    percent_arr = np.where(array < crit_value, 0, array)
+    return percent_arr
+
 
 #Will generate a euclidean distance matrix from the raw data
 def euclMatrix(data):
@@ -207,7 +213,4 @@ def findMyHubs(G):
                         errors='ignore')  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
-  
-def get_ordered_degree_list(G):
-    degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
-    return degree_ordered
+
