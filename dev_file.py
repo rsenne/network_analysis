@@ -11,9 +11,9 @@ if __name__ == "__main__":
     file2 = '/Users/ryansenne/PycharmProjects/networkx/csv_files/Control_Large_Network.csv'
     # allen_groups = pd.read_csv('/Users/ryansenne/PycharmProjects/networkx/csv_files/ROIs.csv')
     #
-    test_data, test_nodes = net_a.loadData(file2)
+    test_data, test_nodes = net_a.loadData(file)
     rvals, p, p_adj, rej = net_a.corrMatrix(test_data)
-    threshold_matrix = net_a.significanceCheck(p_adj, rvals, 1, names=test_nodes, include_Negs=False)
+    threshold_matrix = net_a.significanceCheck(p_adj, rvals, 1, names=test_nodes, include_Negs=True)
     per = net_a.percentile(threshold_matrix, 0.2)
     G, pos = net_a.networx(per, test_nodes)
     df, mark_clust = net_a.markov(G)

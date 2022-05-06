@@ -35,7 +35,7 @@ def loadData(data):
 
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
-def corrMatrix(data):
+def corrMatrix(data, z_trans=True):
     rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
     rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
     rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
@@ -49,7 +49,11 @@ def corrMatrix(data):
     p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
     # Multiple comparison of p values using Bonferroni correction
     rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
-    return rVal, p, p_adjusted, alpha_corrected
+    np.fill_diagonal(rVal, 0) # set main diagonal zero to avoid errors
+    if z_trans:
+        return np.arctanh(rVal), p, p_adjusted, alpha_corrected
+    else:
+        return rVal, p, p_adjusted, alpha_corrected
 
 def percentile(array, p):
     num_obs = int(np.size(array, 0)**2*p)
@@ -124,8 +128,8 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 def networx(corr_data, nodeLabel):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
-    remove = [node for node, degree in graph.degree() if degree < 1]
-    graph.remove_nodes_from(remove)
+    # remove = [node for node, degree in graph.degree() if degree < 1]
+    # graph.remove_nodes_from(remove)
     pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
