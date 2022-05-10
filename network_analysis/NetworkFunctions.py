@@ -115,11 +115,12 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel):
+def networx(corr_data, nodeLabel,drop_islands=False):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
     graph = nx.relabel_nodes(graph, nodeLabel)
-    remove = [node for node, degree in graph.degree() if degree < 1]
-    graph.remove_nodes_from(remove)
+    if drop_islands:
+        remove_node = [node for node, degree in graph.degree() if degree < 1]
+        graph.remove_nodes_from(remove_node)
     pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
@@ -131,31 +132,38 @@ def lazy_network_generator(data):
     G, pos = networx(threshold_matrix, nodes)
     return G
 
-def grab_node_attributes(graph):
+def grab_node_attributes(graph,compress_to_df=False):
     deg = nx.degree_centrality(graph)
     between = nx.betweenness_centrality(graph)
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
+    clust = nx.clustering(graph)
+    comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
-    return deg_sort, between_sort, eig_sort,close_sort
+    clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
+    comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+    if compress_to_df:
+        node_info = {
+            'Degree': list(deg_sort.values()),
+            'Betweenness': list(between_sort.values()),
+            'Eigenvector Centrality': list(eig_sort.values()),
+            'Closeness': list(close_sort.values()),
+            'Clustering Coefficient': list(clust_sort.values()),
+            'Communicability': list(comm_sort.values())
+        }
+        ROI_index = list(graph.nodes)
+        node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
+        return node_attrs_df
+    else:
+        return deg_sort,between_sort,eig_sort,close_sort,clust_sort,comm_sort
 
-def node_attrs_to_csv(nodes,deg_sort,between_sort,eig_sort,close_sort,folder,var_name):
-    ROI_index = list(nodes.values()) #Import the dictionary object with the nodes generated from the graph and make a list
 
-    #Below is a combination of node attributes into one centralized dictionary
-    node_info = {
-        'Degree' : list(deg_sort.values()),
-        'Betweenness' : list(between_sort.values()),
-        'Eigenvector Centrality' : list(eig_sort.values()),
-        'Closeness' : list(close_sort.values())
-    }
-
-    node_df = pd.DataFrame(node_info,index=ROI_index,columns=node_info.keys())
-    node_df.to_csv(folder + '/' + var_name + '.csv')
-    return node_df
+def node_attrs_to_csv(node_attrs_df,folder,var_name):
+    node_attrs_df.to_csv(folder + '/' + var_name + '.csv')
+    return node_attrs_df
 
 
 def get_ordered_degree_list(G):
@@ -169,23 +177,12 @@ def cluster_attributes(graph,communities):
     PC = centrality.participation_coef(adj_matrix,communities,'undirected') #calculate the participation coefficient
     return WMDz,PC
 
-def findMyHubs(G):
-    G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
-                       G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
-    nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an atribute to all nodes
-    cluster_coefficient = nx.clustering(G, weight='weight')  # calculated different measures of importance
-    degree_cent = nx.degree_centrality(G)
-    eigen_cent = nx.eigenvector_centrality(G, max_iter=100000, weight='weight')
-    betweenness = nx.betweenness_centrality(G, weight='distance', normalized=True)
-    closeness = nx.closeness_centrality(G, distance='distance')
-    degree = list(G.degree(G, weight='weight'))
-    communicability = nx.communicability_betweenness_centrality(G)
 
-    dict = {'eigen_cent': eigen_cent, 'betweenness': betweenness, 'closeness': closeness,
-            'clustering': cluster_coefficient, 'degree_cent': degree_cent, 'communicability': communicability}
-
-    Results = pd.DataFrame(dict)  # create a frame with all the measures of importance for every region
-
+def findMyHubs(G,node_attrs_df,use_distance=False):
+    if use_distance:
+        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
+        nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an attribute to all nodes
+    Results = node_attrs_df
     # Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
     # used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
     # For each significant measure an ROI has add one in the score column, a score >= 2 is considered a hub node.
@@ -207,7 +204,3 @@ def findMyHubs(G):
                         errors='ignore')  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
-  
-def get_ordered_degree_list(G):
-    degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
-    return degree_ordered

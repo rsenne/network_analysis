@@ -50,11 +50,11 @@ def hierarch_clust(graph, nodes, allen_groups, plot=False):
     if plot:
         plt.figure()
         sch.dendrogram(sch.linkage(adj_matrix,method='ward',metric='euclidean'))
-    return df_clust_cuts,clust_assigns,sorted(list(clusters))
+    return df_clust_cuts,modularities,clust_assigns,sorted(list(clusters))
 
 
 def markov(graph, plot=False):
-    matrix = nx.to_scipy_sparse_matrix(graph)  # Will generate an adjacency matrix from the graph
+    matrix = nx.to_scipy_sparse_array(graph)  # Will generate an adjacency matrix from the graph
     inflation_values = []
     modularity_values = []
     for inflation in [i / 10 for i in range(15, 135, 5)]:
@@ -77,7 +77,7 @@ def markov(graph, plot=False):
     return df, mc_clusters
 
 
-def louvain(graph,nodes):
+def louvain(graph,nodes,niters):
     node_nums = {value:key for key,value in nodes.items()}
     graph = nx.relabel_nodes(graph,node_nums)
     resolutions = [0.5,1.0,1.2,1.4,1.6,1.8,2.0]
@@ -87,8 +87,9 @@ def louvain(graph,nodes):
         lou_mod.append(nx_comm.modularity(graph,lou_clust))
     lou_modularities = {res:mod for res, mod in zip(resolutions,lou_mod)}
     max_res = max(lou_modularities,key=lou_modularities.get)
-    max_mod_lou_comm = nx_comm.louvain_communities(graph,resolution=max_res,randomize=True, seed=100)
-    max_mod_lou_comm = [tuple(c) for c in max_mod_lou_comm]
+    louvain_iters = [nx_comm.louvain_communities(graph,resolution=max_res,seed='random_state') for i in range(niters)]
+    '''max_mod_lou_comm = nx_comm.louvain_communities(graph,resolution=max_res,seed='random_state')
+    max_mod_lou_comm = [tuple(c) for c in max_mod_lou_comm]'''
     return max_mod_lou_comm
 
 
@@ -105,6 +106,8 @@ def in_silico_deletion(G, plot=False):
         fig, ax = plt.subplots()
         plt.scatter(degree_list, delta_global_eff)
         abline_plot(model_results=my_model, ax=ax)
+        plt.xlabel('Degree of Node Deleted')
+        plt.ylabel(r'$\Delta$' + ' ' + 'Global Efficiency')
     return delta_global_eff
 
 # this is the disruption propagation model from Vetere et al. 2018
