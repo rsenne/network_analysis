@@ -20,8 +20,8 @@ def collect_csvs(filepath):
     return df
 
 #Get each df for Control and ChR2 group and sort them by name
-df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/Control/").sort_values(by = ["name","filename"])
-df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ChR2/").sort_values(by = ["name","filename"])
+df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Network_csv/Control_animals").sort_values(by = ["name","filename"])
+df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/Network_csv/ChR2_animals").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe
 discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","Isocortex","Cerebellar","Cerebellum","Thalamus",
@@ -122,5 +122,5 @@ ChR2 = ChR2[cols]
 Control = Control[cols]'''
 
 #Turn the final ChR2 and Control dfs into .csv files to send to Ryan
-ChR2.to_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ChR2/ChR2_Large_Network.csv", index = False)
-Control.to_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/Control/Control_Large_Network.csv", index = False)
+ChR2.to_csv("/Users/kaitlyndorst/Desktop/Network_csv/ChR2_animals/ChR2_Large_Network.csv", index = False)
+Control.to_csv("/Users/kaitlyndorst/Desktop/Network_csv/Control_animals/Control_Large_Network.csv", index = False)
