@@ -35,7 +35,7 @@ def loadData(data):
 
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
-def corrMatrix(data):
+def corrMatrix(data, z_trans=True):
     rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
     rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
     rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
@@ -49,7 +49,17 @@ def corrMatrix(data):
     p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
     # Multiple comparison of p values using Bonferroni correction
     rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
-    return rVal, p, p_adjusted, alpha_corrected
+    np.fill_diagonal(rVal, 0) # set main diagonal zero to avoid errors
+    if z_trans:
+        return np.arctanh(rVal), p, p_adjusted, alpha_corrected
+    else:
+        return rVal, p, p_adjusted, alpha_corrected
+
+def percentile(array, p):
+    num_obs = int(np.size(array, 0)**2*p)
+    crit_value = -np.sort(-array.flatten())[num_obs]
+    percent_arr = np.where(array < crit_value, 0, array)
+    return percent_arr
 
 
 #Will generate a euclidean distance matrix from the raw data
