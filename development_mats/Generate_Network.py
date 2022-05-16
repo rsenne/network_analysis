@@ -25,8 +25,8 @@ ChR2_graph, ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
 Control_graph, Control_pos = networx(Control_threshold_matrix,Control_nodes)
 
 #Get the node attributes of the generated graphs
-ChR2_node_attrs = grab_node_attributes(ChR2_graph,compress_to_df=True)
-Control_node_attrs = grab_node_attributes(Control_graph,compress_to_df=True)
+ChR2_node_attrs = grab_node_attributes(ChR2_graph,use_distance=False,compress_to_df=True)
+Control_node_attrs = grab_node_attributes(Control_graph,use_distance=False,compress_to_df=True)
 
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
 ChR2_str_nodes = nameof(ChR2_nodes)
@@ -49,7 +49,7 @@ plt.ylabel("Number of Clusters")
 plt.legend(loc='upper right')
 
 #Run some markov clustering
-ChR2_markov_df,ChR2_markov_clusters = markov(ChR2_graph,plot = False)
+ChR2_markov_df,ChR2_markov_clusters = markov(ChR2_graph,ChR2_nodes)
 Control_markov_df,Control_markov_clusters = markov(Control_graph,plot = False)
 
 #Run louvain clustering

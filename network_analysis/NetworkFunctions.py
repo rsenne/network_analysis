@@ -135,6 +135,7 @@ def networx(corr_data, nodeLabel,drop_islands=False):
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
 
+
 def lazy_network_generator(data):
     df, nodes = loadData(data)
     rVal, p, p_adjusted, alpha_corrected = corrMatrix(df)
@@ -142,7 +143,11 @@ def lazy_network_generator(data):
     G, pos = networx(threshold_matrix, nodes)
     return G
 
-def grab_node_attributes(graph,compress_to_df=False):
+
+def grab_node_attributes(graph,use_distance=False,compress_to_df=False):
+    if use_distance:
+        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
+        nx.set_edge_attributes(G, values=G_distance_dict, name='distance')
     deg = nx.degree_centrality(graph)
     between = nx.betweenness_centrality(graph)
     eig = nx.eigenvector_centrality(graph)
@@ -159,9 +164,9 @@ def grab_node_attributes(graph,compress_to_df=False):
         node_info = {
             'Degree': list(deg_sort.values()),
             'Betweenness': list(between_sort.values()),
-            'Eigenvector Centrality': list(eig_sort.values()),
+            'Eigenvector_Centrality': list(eig_sort.values()),
             'Closeness': list(close_sort.values()),
-            'Clustering Coefficient': list(clust_sort.values()),
+            'Clustering_Coefficient': list(clust_sort.values()),
             'Communicability': list(comm_sort.values())
         }
         ROI_index = list(graph.nodes)
@@ -182,30 +187,27 @@ def get_ordered_degree_list(G):
 
 
 def cluster_attributes(graph,communities):
-    adj_matrix = nx.to_numpy_matrix(graph) #Will create an adjacency matrix from the graph
+    adj_matrix = nx.to_numpy_array(graph) #Will create an adjacency matrix from the graph as a np.ndarray
     WMDz = centrality.module_degree_zscore(adj_matrix,communities,flag=0) #calculate the WMDz
     PC = centrality.participation_coef(adj_matrix,communities,'undirected') #calculate the participation coefficient
     return WMDz,PC
 
 
-def findMyHubs(G,node_attrs_df,use_distance=False):
-    if use_distance:
-        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
-        nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an attribute to all nodes
+def findMyHubs(node_attrs_df):
     Results = node_attrs_df
     # Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
     # used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
     # For each significant measure an ROI has add one in the score column, a score >= 2 is considered a hub node.
     Results['score'] = 0
-    Results['score'] = np.where((Results['eigen_cent'] > Results.eigen_cent.quantile(0.80)), Results['score'] + 1,
+    Results['score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['score'] + 1,
                                 Results['score'])
-    Results['score'] = np.where((Results['eigen_cent'] < Results.eigen_cent.quantile(.20)), Results['score'] + 1,
+    Results['score'] = np.where((Results['Eigenvector_Centrality'] <= Results..quantile(.20)), Results['score'] + 1,
                                 Results['score'])
-    Results['score'] = np.where((Results['betweenness'] >= Results.betweenness.quantile(0.80)), Results['score'] + 1,
+    Results['score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)), Results['score'] + 1,
                                 Results['score'])
-    Results['score'] = np.where((Results['clustering'] <= Results.clustering.quantile(.20)), Results['score'] + 1,
+    Results['score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)), Results['score'] + 1,
                                 Results['score'])
-    Results['score'] = np.where((Results['communicability'] >= Results.communicability.quantile(.80)),
+    Results['score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
                                 Results['score'] + 1, Results['score'])
 
     NonHubs = Results[(Results['score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
