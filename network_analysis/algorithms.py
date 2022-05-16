@@ -87,12 +87,12 @@ def markov(graph,nodes):
     for node in node_nums:
         for clust in mc_clust_index:
             if node in mc_clusters[clust]:
-                cluster_vector.append(clust)
+                cluster_vector_mc.append(clust)
             else:
                 pass
     cluster_vector_mc = np.array(cluster_vector_mc)
     cluster_vector_mc = np.reshape(cluster_vector_mc,(155,1))
-    
+
     return df, mc_clusters, cluster_vector_mc
 
 
@@ -109,6 +109,21 @@ def louvain(graph,nodes,n_iters):
     louvain_iters = [nx_comm.louvain_communities(graph,resolution=max_res,seed='random_state') for i in range(n_iters)]
     '''
     max_mod_lou_comm = [tuple(c) for c in max_mod_lou_comm]'''
+
+    ''''#Generate a N x 1 np.array to use for PC and WMDz calculations
+    node_nums = list(nodes.keys())
+    lou_clust_index = [i for i in range(len())]
+    cluster_vector_lou = []
+    
+    for node in node_nums:
+        for clust in lou_clust_index:
+            if node in lou_clusters[clust]:
+                cluster_vector_lou.append(clust)
+            else:
+                pass
+    cluster_vector_lou = np.array(cluster_vector_lou)
+    cluster_vector_lou = np.reshape(cluster_vector_lou,(155,1))
+    '''
     return max_mod_lou_comm
 
 
