@@ -176,21 +176,22 @@ def grab_node_attributes(graph,use_distance=False,compress_to_df=False):
         return deg_sort,between_sort,eig_sort,close_sort,clust_sort,comm_sort
 
 
-def node_attrs_to_csv(node_attrs_df,folder,var_name):
-    node_attrs_df.to_csv(folder + '/' + var_name + '.csv')
-    return node_attrs_df
-
-
 def get_ordered_degree_list(G):
     degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
     return degree_ordered
 
 
-def cluster_attributes(graph,communities):
+def cluster_attributes(graph,nodes,communities,make_df=False):
     adj_matrix = nx.to_numpy_array(graph) #Will create an adjacency matrix from the graph as a np.ndarray
+    node_ROIs = nodes.values()
     WMDz = centrality.module_degree_zscore(adj_matrix,communities,flag=0) #calculate the WMDz
     PC = centrality.participation_coef(adj_matrix,communities,'undirected') #calculate the participation coefficient
-    return WMDz,PC
+    if make_df:
+        d = {'WMDz':WMDz,"PC":PC}
+        df = pd.DataFrame(d,columns=["WMDz","PC"],index=node_ROIs)
+        return df
+    else:
+        return WMDz,PC
 
 
 def findMyHubs(node_attrs_df):
@@ -198,21 +199,35 @@ def findMyHubs(node_attrs_df):
     # Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
     # used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
     # For each significant measure an ROI has add one in the score column, a score >= 2 is considered a hub node.
-    Results['score'] = 0
-    Results['score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['Eigenvector_Centrality'] <= Results..quantile(.20)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
-                                Results['score'] + 1, Results['score'])
 
-    NonHubs = Results[(Results['score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
+    Results['Hub_Score'] = 0
+    Results['Hub_Score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] <= Results.Eigenvector_Centrality.quantile(.20)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
+                                Results['Hub_Score'] + 1, Results['Hub_Score'])
+
+    NonHubs = Results[(Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
 
     Hubs = Results.drop(NonHubs,
                         errors='ignore')  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
+
+
+def combine_node_attrs(node_attrs_df,WMDz_PC_df,Allens):
+    final_df = pd.merge(node_attrs_df,WMDz_PC_df,left_index=True,right_index=True) #You need the two dfs from Results & Hubs functions
+    final_df['Allen_ROI'] = Allens #This is the list that comes from the unpickled Allen_ROI_dict
+    #reorder all of the columns to your liking
+    final_df = final_df[["Allen_ROI","Degree","Betweenness","Eigenvector_Centrality","Closeness","Clustering_Coefficient","Communicability","WMDz","PC","Hub_Score"]]
+    return final_df
+
+
+def node_attrs_to_csv(final_df,folder,var_name):
+    final_df.to_csv(folder + '/' + var_name + '.csv')
+    return
