@@ -55,6 +55,8 @@ def corrMatrix(data, z_trans=True):
     else:
         return rVal, p, p_adjusted, alpha_corrected
 
+
+#Function that will threshold R-vals on the top percentile
 def percentile(array, p):
     num_obs = int(np.size(array, 0)**2*p)
     crit_value = -np.sort(-array.flatten())[num_obs]
@@ -220,11 +222,12 @@ def findMyHubs(node_attrs_df):
     return Results, Hubs
 
 
-def combine_node_attrs(node_attrs_df,WMDz_PC_df,Allens):
+def combine_node_attrs(node_attrs_df,WMDz_PC_df,Allens,glob_eff):
     final_df = pd.merge(node_attrs_df,WMDz_PC_df,left_index=True,right_index=True) #You need the two dfs from Results & Hubs functions
     final_df['Allen_ROI'] = Allens #This is the list that comes from the unpickled Allen_ROI_dict
+    final_df['Delta_Global_Efficiency'] = glob_eff
     #reorder all of the columns to your liking
-    final_df = final_df[["Allen_ROI","Degree","Betweenness","Eigenvector_Centrality","Closeness","Clustering_Coefficient","Communicability","WMDz","PC","Hub_Score"]]
+    final_df = final_df[["Allen_ROI","Degree","Betweenness","Eigenvector_Centrality","Closeness","Clustering_Coefficient","Communicability","WMDz","PC","Delta_Global_Efficiency","Hub_Score"]]
     return final_df
 
 

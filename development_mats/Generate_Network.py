@@ -77,14 +77,14 @@ Control_mc_WMDz_PC_df = cluster_attributes(Control_graph,Control_nodes,Control_m
 ChR2_Results,ChR2_Hubs = findMyHubs(ChR2_node_attrs)
 Control_Results,Control_Hubs = findMyHubs(Control_node_attrs)
 
+#Do some quick in silico deletions and measure global efficiency
+ChR2_delta_glob_eff = in_silico_deletion(ChR2_graph,plot=True)
+Control_delta_glob_eff = in_silico_deletion(Control_graph,plot=True)
+
 #Optional, combine all of the attributes into one final dataframe
-ChR2_final_df = combine_node_attrs(ChR2_Results,ChR2_mc_WMDz_PC_df,Allen_Groups)
-Control_final_df = combine_node_attrs(Control_Results,Control_mc_WMDz_PC_df,Allen_Groups)
+ChR2_final_df = combine_node_attrs(ChR2_Results,ChR2_mc_WMDz_PC_df,Allen_Groups,ChR2_delta_glob_eff)
+Control_final_df = combine_node_attrs(Control_Results,Control_mc_WMDz_PC_df,Allen_Groups,Control_delta_glob_eff)
 
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
 node_attrs_to_csv(ChR2_final_df,'/Users/kaitlyndorst/Desktop/ChR2_Small_Box','ChR2_nodes_Small_Box')
 node_attrs_to_csv(Control_final_df,'/Users/kaitlyndorst/Desktop/Control_Small_Box ','Control_nodes_Small_Box')
-
-#Do some quick in silico deletions and measure global efficiency
-ChR2_delta_glob_eff = in_silico_deletion(ChR2_graph,plot=True)
-Control_delta_glob_eff = in_silico_deletion(Control_graph,plot=True)
