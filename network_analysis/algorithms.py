@@ -99,7 +99,7 @@ def markov(graph,nodes):
 def louvain(graph,nodes,n_iters):
     node_nums = {value:key for key,value in nodes.items()}
     graph = nx.relabel_nodes(graph,node_nums)
-    resolutions = [0.5,1.0,1.2,1.4,1.6,1.8,2.0]
+    resolutions = [0.5,1.0,1.2,1.4,1.6,1.8,2.0] #Use different iterations instead of resolutions and average the 1000 Q values
     lou_mod = []
     for i in resolutions:
         lou_clust = nx_comm.louvain_communities(graph,resolution=i)

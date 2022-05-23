@@ -113,14 +113,14 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
                 #Plot the newly generated Allen ROI correlation maitrx
                 plt.figure()
-                sns.clustermap(allen_pandas,cmap='viridis',row_colors=allen_colors,col_colors=allen_colors,
+                sns.clustermap(allen_pandas,cmap='vlag',row_colors=allen_colors,col_colors=allen_colors,
                                row_cluster=False,col_cluster=False,xticklabels=False,yticklabels=False,
-                               figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
+                               figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'arctan(R)'})
                 plt.legend(handles=[cerebellum,cort_plate,cort_subplate,hypothalamus,medulla,midbrain,pallidum,pons,striatum,thalamus],
                            bbox_to_anchor=(5.0,1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix,cmap='viridis',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
+        sns.clustermap(pandas_matrix,cmap='vlag',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
         return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
@@ -216,8 +216,7 @@ def findMyHubs(node_attrs_df):
 
     NonHubs = Results[(Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
 
-    Hubs = Results.drop(NonHubs,
-                        errors='ignore')  # create a new frame with only the important nodes/ take out rois in the prior index
+    Hubs = Results.drop(NonHubs).sort_values('Hub_Score',ascending=False)  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
 

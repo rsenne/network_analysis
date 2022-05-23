@@ -16,14 +16,16 @@ ChR2_rVal,ChR2_p_raw,ChR2_p_adj, ChR2_alpha = corrMatrix(ChR2_raw_data)
 Control_rVal,Control_p_raw,Control_p_adj, Control_alpha = corrMatrix(Control_raw_data)
 
 #Will take the top 20% of the weighted edges in the threshold matrix
-ChR2_percent_array = percentile(ChR2_rVal,.20)
-Control_percent_array = percentile(Control_rVal,.20)
 
 #After getting the rVal and adjust p-values, then run the function to check for significance and generate the corr matrices with all non-zero values
-ChR2_threshold_matrix = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha=ChR2_alpha, threshold=0.001,
-                                                             names=ChR2_nodes, plot=False, include_Negs=True, Anatomy=ROIs)
-Control_threshold_matrix= significanceCheck(Control_p_adj,Control_rVal,alpha=Control_alpha, threshold=0.001,
-                                                                   names=Control_nodes, plot=False, include_Negs=True, Anatomy=ROIs)
+ChR2_threshold_matrix,ChR2_pandas = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha=ChR2_alpha, threshold=0.001,
+                                                             names=ChR2_nodes, plot=True, include_Negs=True, Anatomy=ROIs)
+Control_threshold_matrix,Control_pandas = significanceCheck(Control_p_adj,Control_rVal,alpha=Control_alpha, threshold=0.001,
+                                                                   names=Control_nodes, plot=True, include_Negs=True, Anatomy=ROIs)
+
+#A threshold array to look at the top 20% magnitude edges
+ChR2_percent_array = percentile(ChR2_threshold_matrix,.20)
+Control_percent_array = percentile(Control_threshold_matrix,.20)
 
 #Using the generated correlation matrices, build a graph using networkx
 ChR2_graph, ChR2_pos = networx(ChR2_percent_array,ChR2_nodes)
@@ -62,8 +64,8 @@ ChR2_pos_dict = get_position_data(ChR2_markov_clusters,ChR2_nodes)
 Control_pos_dict = get_position_data(Control_markov_clusters,Control_nodes)
 
 #Graph the things
-graph_network(ChR2_graph,allen_color_list,ChR2_pos_dict)
-graph_network(Control_graph,allen_color_list,Control_pos_dict)
+graph_network(ChR2_graph,allen_color_list,pos_dict=ChR2_pos_dict)
+graph_network(Control_graph,allen_color_list,pos_dict=Control_pos_dict)
 
 #Get the node attributes of the generated graphs
 ChR2_node_attrs = grab_node_attributes(ChR2_graph,use_distance=False,compress_to_df=True)
@@ -88,3 +90,17 @@ Control_final_df = combine_node_attrs(Control_Results,Control_mc_WMDz_PC_df,Alle
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
 node_attrs_to_csv(ChR2_final_df,'/Users/kaitlyndorst/Desktop/ChR2_Small_Box','ChR2_nodes_Small_Box')
 node_attrs_to_csv(Control_final_df,'/Users/kaitlyndorst/Desktop/Control_Small_Box ','Control_nodes_Small_Box')
+
+#Take a holistic approach and look at all of the edges in the network instead of the strongest
+whole_ChR2_graph,whole_ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
+graph_network(whole_ChR2_graph,allen_color_list,whole_ChR2_pos)
+
+whole_ChR2_node_attrs = grab_node_attributes(whole_ChR2_graph,use_distance=False,compress_to_df=True)
+whole_ChR2_degree_list = get_ordered_degree_list(whole_ChR2_graph)
+whole_ChR2_Results, whole_ChR2_Hubs = findMyHubs(whole_ChR2_node_attrs)
+
+#Disruption Propagation Example
+ChR2_VTA_FinalMat = disruptPropagate(whole_ChR2_graph,'VTA')
+ChR2_VTA_FinalMat = ChR2_VTA_FinalMat.to_numpy()
+VTA_del_graph,VTA_pos_dict = networx(ChR2_VTA_FinalMat,ChR2_nodes)
+graph_network(VTA_del_graph,allen_color_list,pos_dict=whole_ChR2_pos)
