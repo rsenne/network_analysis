@@ -14,6 +14,7 @@ def grab_color_attributes(cluster_list, node_dict):
     color_dict_sorted = {area: color for area, color in sorted(color_dict.items(), key=lambda ele: ele[0])}
     return color_dict_sorted
 
+
 def get_allen_colors(allen_rois):
     allen_df = pd.read_csv(allen_rois)
     allen_list = list(set(allen_df['Allen Group Name']))
