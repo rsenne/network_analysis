@@ -99,32 +99,46 @@ def markov(graph, nodes):
 def louvain(graph,nodes,n_iters):
     node_nums = {value:key for key,value in nodes.items()}
     graph = nx.relabel_nodes(graph,node_nums)
-    resolutions = [0.5,1.0,1.2,1.4,1.6,1.8,2.0] #Use different iterations instead of resolutions and average the 1000 Q values
+    # Use different iterations instead of resolutions and average the 1000 Q values
+    louvain_iters = [nx_comm.louvain_communities(graph, resolution=1.0) for i in range(n_iters)]
     lou_mod = []
-    for i in resolutions:
-        lou_clust = nx_comm.louvain_communities(graph,resolution=i)
-        lou_mod.append(nx_comm.modularity(graph,lou_clust))
-    lou_modularities = {res:mod for res, mod in zip(resolutions,lou_mod)}
-    max_res = max(lou_modularities,key=lou_modularities.get)
-    louvain_iters = [nx_comm.louvain_communities(graph,resolution=max_res,seed='random_state') for i in range(n_iters)]
-    '''
-    max_mod_lou_comm = [tuple(c) for c in max_mod_lou_comm]'''
+    for i in louvain_iters:
+        mods = nx.algorithms.community.modularity(graph,i,weight='weight',resolution=1)
+        lou_mod.append(mods)
 
-    ''''#Generate a N x 1 np.array to use for PC and WMDz calculations
-    node_nums = list(nodes.keys())
-    lou_clust_index = [i for i in range(len())]
+    #Combine all of the results into a dataframe
+    d = {'Louvain_Results':louvain_iters,'Modularity':lou_mod}
+    df = pd.DataFrame(d,columns=['Louvain_Results','Modularity'])
+    column = df['Modularity']
+    max_mod = column.idxmax()
+    comm_max_mod = df['Louvain_Results'].iloc[max_mod]
+
+    #Get the value of the max Q
+    lou_max_mod = column.max()
+
+    #Average all of the Q values together
+    lou_mod_mean = df['Modularity'].mean()
+
+    #Get a list that is used for plotting utils to cluster based on community structure
+    max_mod_lou_comm = [tuple(c) for c in comm_max_mod]
+
+    # Generate a N x 1 np.array to use for PC and WMDz calculations
+    node_keys = list(nodes.keys())
+    lou_clust_index = [i for i in range(len(max_mod_lou_comm))]
     cluster_vector_lou = []
-    
-    for node in node_nums:
+    for node in node_keys:
         for clust in lou_clust_index:
-            if node in lou_clusters[clust]:
+            if node in max_mod_lou_comm[clust]:
                 cluster_vector_lou.append(clust)
             else:
                 pass
     cluster_vector_lou = np.array(cluster_vector_lou)
-    cluster_vector_lou = np.reshape(cluster_vector_lou,(155,1))
-    '''
-    # return max_mod_lou_comm
+    cluster_vector_lou = np.reshape(cluster_vector_lou, (155, 1))
+
+    return max_mod_lou_comm,lou_max_mod,lou_mod_mean,cluster_vector_lou
+
+
+
 
 
 def in_silico_deletion(G, plot=False):

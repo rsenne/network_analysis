@@ -18,9 +18,9 @@ Control_rVal,Control_p_raw,Control_p_adj, Control_alpha = corrMatrix(Control_raw
 #Will take the top 20% of the weighted edges in the threshold matrix
 
 #After getting the rVal and adjust p-values, then run the function to check for significance and generate the corr matrices with all non-zero values
-ChR2_threshold_matrix,ChR2_pandas = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha=ChR2_alpha, threshold=0.001,
+ChR2_threshold_matrix,ChR2_pandas = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha=ChR2_alpha, threshold=0.0,
                                                              names=ChR2_nodes, plot=True, include_Negs=True, Anatomy=ROIs)
-Control_threshold_matrix,Control_pandas = significanceCheck(Control_p_adj,Control_rVal,alpha=Control_alpha, threshold=0.001,
+Control_threshold_matrix,Control_pandas = significanceCheck(Control_p_adj,Control_rVal,alpha=Control_alpha, threshold=0.0,
                                                                    names=Control_nodes, plot=True, include_Negs=True, Anatomy=ROIs)
 
 #A threshold array to look at the top 20% magnitude edges
