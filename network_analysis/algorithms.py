@@ -58,6 +58,7 @@ def markov(graph, plot=False):
     inflation_values = []
     modularity_values = []
     for inflation in [i / 10 for i in range(15, 135, 5)]:
+        print(inflation)
         result = mc.run_mcl(matrix, inflation=inflation)
         clusters = mc.get_clusters(result)
         Q = mc.modularity(matrix=result, clusters=clusters)

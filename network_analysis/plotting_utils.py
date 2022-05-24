@@ -50,7 +50,7 @@ def get_position_data(cluster_list, node_names):
     nodes_list = [x for x in range(0, number_of_clusters)]
     pos_graph = nx.Graph()
     pos_graph.add_nodes_from(nodes_list)
-    pos = nx.circular_layout(pos_graph, scale=40, dim=2)
+    pos = nx.circular_layout(pos_graph, scale=35, dim=2)
     num_of_nodes = [len(node) for node in cluster_list]
     point_clouds = [get_point_cloud(lens) for lens in num_of_nodes]
     for i in range(len(point_clouds)):

@@ -17,6 +17,7 @@ from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
+import network_analysis.algorithms as algorithms
 
 
 # simple function for loading our csv file
@@ -57,7 +58,7 @@ def corrMatrix(data, z_trans=True):
 
 def percentile(array, p):
     num_obs = int(np.size(array, 0)**2*p)
-    crit_value = -np.sort(-array.flatten())[num_obs]
+    crit_value = -np.sort(-array.flatten())[num_obs-1]
     percent_arr = np.where(array < crit_value, 0, array)
     return percent_arr
 
@@ -127,7 +128,8 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data, nodeLabel):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
-    graph = nx.relabel_nodes(graph, nodeLabel)
+    if nodeLabel:
+        graph = nx.relabel_nodes(graph, nodeLabel)
     # remove = [node for node, degree in graph.degree() if degree < 1]
     # graph.remove_nodes_from(remove)
     pos = nx.spring_layout(graph)
@@ -181,8 +183,8 @@ def cluster_attributes(graph,communities):
 
 def findMyHubs(G):
     G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
-                       G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
-    nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an atribute to all nodes
+                       G.edges(data='weight')}  # creates a dict of calculated distance between all nodes
+    nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an attribute to all nodes
     cluster_coefficient = nx.clustering(G, weight='weight')  # calculated different measures of importance
     degree_cent = nx.degree_centrality(G)
     eigen_cent = nx.eigenvector_centrality(G, max_iter=100000, weight='weight')
@@ -217,4 +219,18 @@ def findMyHubs(G):
                         errors='ignore')  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
+
+def threshold_simulation(adj_mat, a, b, x, algo='markov'):
+    percentiles = [i for i in np.linspace(a, b, x)]
+    thresholded_arrays = [percentile(adj_mat, p) for p in percentiles]
+    if algo == 'markov':
+        modularity = []
+        for thresh in thresholded_arrays:
+            print(thresh)
+            G, _ = networx(thresh, nodeLabel=None)
+            _, mc_clusters = algorithms.markov(G)
+            modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
+    else:
+        modularity = []
+    return percentiles, modularity
 
