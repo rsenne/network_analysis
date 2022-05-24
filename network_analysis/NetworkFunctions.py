@@ -12,6 +12,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.special as sc
+import scipy.stats
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
@@ -36,26 +37,29 @@ def loadData(data):
 
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
-def corrMatrix(data, z_trans=True):
-    rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
-    rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
-    rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
-    df = data.shape[1] - 2  # calculate degrees of freedom
-    ts = rf * rf * (df / (1 - rf * rf))  # calculate t's
-    pf = sc.betainc(0.5 * df, 0.5, df / (df + ts))  # calculate p's from beta incomplete function
-    # generate p-value matrix
-    p = np.zeros(shape=rVal.shape)
-    p[np.triu_indices(p.shape[0], 1)] = pf
-    p[np.tril_indices(p.shape[0], -1)] = p.T[np.tril_indices(p.shape[0], -1)]
-    p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
-    # Multiple comparison of p values using Bonferroni correction
-    rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
-    np.fill_diagonal(rVal, 0)  # set main diagonal zero to avoid errors
-    if z_trans:
-        return np.arctanh(rVal), p, p_adjusted, alpha_corrected
-    else:
-        return rVal, p, p_adjusted, alpha_corrected
-
+def corrMatrix(data, corr_type='Pearson', z_trans=True):
+    if corr_type == 'Pearson':
+        rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
+        rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
+        rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
+        df = data.shape[1] - 2  # calculate degrees of freedom
+        ts = rf * rf * (df / (1 - rf * rf))  # calculate t's
+        pf = sc.betainc(0.5 * df, 0.5, df / (df + ts))  # calculate p's from beta incomplete function
+        # generate p-value matrix
+        p = np.zeros(shape=rVal.shape)
+        p[np.triu_indices(p.shape[0], 1)] = pf
+        p[np.tril_indices(p.shape[0], -1)] = p.T[np.tril_indices(p.shape[0], -1)]
+        p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
+        # Multiple comparison of p values using Bonferroni correction
+        rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
+        np.fill_diagonal(rVal, 0)  # set main diagonal zero to avoid errors
+        if z_trans:
+            return np.arctanh(rVal), p, p_adjusted, alpha_corrected
+        else:
+            return rVal, p, p_adjusted, alpha_corrected
+    elif corr_type == 'Spearman':
+        rVal, pVal = scipy.stats.spearmanr(data, axis=0)
+        return rVal, pVal
 
 # Function that will threshold R-vals on the top percentile
 def percentile(array, p):
