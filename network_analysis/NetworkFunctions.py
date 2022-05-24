@@ -50,25 +50,25 @@ def corrMatrix(data, z_trans=True):
     p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
     # Multiple comparison of p values using Bonferroni correction
     rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
-    np.fill_diagonal(rVal, 0) # set main diagonal zero to avoid errors
+    np.fill_diagonal(rVal, 0)  # set main diagonal zero to avoid errors
     if z_trans:
         return np.arctanh(rVal), p, p_adjusted, alpha_corrected
     else:
         return rVal, p, p_adjusted, alpha_corrected
 
 
-#Function that will threshold R-vals on the top percentile
+# Function that will threshold R-vals on the top percentile
 def percentile(array, p):
-    num_obs = int(np.size(array, 0)**2*p)
-    crit_value = -np.sort(-array.flatten())[num_obs-1]
+    num_obs = int(np.size(array, 0) ** 2 * p)
+    crit_value = -np.sort(-array.flatten())[num_obs - 1]
     percent_arr = np.where(array < crit_value, 0, array)
     return percent_arr
 
 
-#Will generate a euclidean distance matrix from the raw data
+# Will generate a euclidean distance matrix from the raw data
 def euclMatrix(data):
     data = data.T
-    eucl_matrix = cdist(data,data,metric='euclidean')
+    eucl_matrix = cdist(data, data, metric='euclidean')
     return eucl_matrix
 
 
@@ -84,51 +84,54 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
     # create a heatmap of correlations if wanted
     if plot:
         if names:
-            pandas_matrix = pd.DataFrame(threshold_matrix,index=list(names.values()),columns=list(names.values()))
+            pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
             if Anatomy:
-                #Create a sorted dictionary from the unpickled ROIs dictionary
-                sorted_dict = dict(sorted(Anatomy.items(),key=lambda item: item[1]))
+                # Create a sorted dictionary from the unpickled ROIs dictionary
+                sorted_dict = dict(sorted(Anatomy.items(), key=lambda item: item[1]))
                 list_for_sort = list(sorted_dict.keys())
 
-                #Reorganize the pandas_matrix to reflect the order of the Allen ROIs
+                # Reorganize the pandas_matrix to reflect the order of the Allen ROIs
                 allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort]
 
-                #Create color assignments for Allen ROIs
+                # Create color assignments for Allen ROIs
                 num_allens = list(sorted_dict.values())
                 allens_unique = np.unique(num_allens)
-                color_list = [color for color in sns.color_palette('Set3',n_colors=len(allens_unique))]
-                color_ref = dict(zip(map(str,allens_unique),color_list))
-                allen_colors = pd.Series(num_allens,index=allen_pandas.columns).map(color_ref)
+                color_list = [color for color in sns.color_palette('Set3', n_colors=len(allens_unique))]
+                color_ref = dict(zip(map(str, allens_unique), color_list))
+                allen_colors = pd.Series(num_allens, index=allen_pandas.columns).map(color_ref)
 
-                #Create a legend for the Allen ROIs
-                cerebellum = mpatches.Patch(color=color_list[0],label='Cerebellum')
-                cort_plate = mpatches.Patch(color=color_list[1],label='Cortical Plate')
-                cort_subplate = mpatches.Patch(color=color_list[2],label='Cortical Subplate')
-                hypothalamus = mpatches.Patch(color=color_list[3],label='Hypothalamus')
-                medulla = mpatches.Patch(color=color_list[4],label='Medulla')
-                midbrain = mpatches.Patch(color=color_list[5],label='Midbrain')
-                pallidum = mpatches.Patch(color=color_list[6],label='Pallidum')
-                pons = mpatches.Patch(color=color_list[7],label='Pons')
-                striatum = mpatches.Patch(color=color_list[8],label='Striatum')
-                thalamus = mpatches.Patch(color=color_list[9],label='Thalamus')
+                # Create a legend for the Allen ROIs
+                cerebellum = mpatches.Patch(color=color_list[0], label='Cerebellum')
+                cort_plate = mpatches.Patch(color=color_list[1], label='Cortical Plate')
+                cort_subplate = mpatches.Patch(color=color_list[2], label='Cortical Subplate')
+                hypothalamus = mpatches.Patch(color=color_list[3], label='Hypothalamus')
+                medulla = mpatches.Patch(color=color_list[4], label='Medulla')
+                midbrain = mpatches.Patch(color=color_list[5], label='Midbrain')
+                pallidum = mpatches.Patch(color=color_list[6], label='Pallidum')
+                pons = mpatches.Patch(color=color_list[7], label='Pons')
+                striatum = mpatches.Patch(color=color_list[8], label='Striatum')
+                thalamus = mpatches.Patch(color=color_list[9], label='Thalamus')
 
-                #Plot the newly generated Allen ROI correlation maitrx
+                # Plot the newly generated Allen ROI correlation maitrx
                 plt.figure()
-                sns.clustermap(allen_pandas,cmap='vlag',row_colors=allen_colors,col_colors=allen_colors,
-                               row_cluster=False,col_cluster=False,xticklabels=False,yticklabels=False,
-                               figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'arctan(R)'})
-                plt.legend(handles=[cerebellum,cort_plate,cort_subplate,hypothalamus,medulla,midbrain,pallidum,pons,striatum,thalamus],
-                           bbox_to_anchor=(5.0,1.6))
+                sns.clustermap(allen_pandas, cmap='vlag', row_colors=allen_colors, col_colors=allen_colors,
+                               row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
+                               figsize=(10, 10), cbar_pos=(0.1, 0.15, .02, .4), cbar_kws={'label': 'arctan(R)'})
+                plt.legend(
+                    handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla, midbrain, pallidum, pons,
+                             striatum, thalamus],
+                    bbox_to_anchor=(5.0, 1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix,cmap='vlag',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
+        sns.clustermap(pandas_matrix, cmap='vlag', method='ward', metric='euclidean', figsize=(10, 10),
+                       cbar_pos=(.9, .9, .02, .10))
         return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel,drop_islands=False):
+def networx(corr_data, nodeLabel, drop_islands=False):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
     if nodeLabel:
         graph = nx.relabel_nodes(graph, nodeLabel)
@@ -153,10 +156,11 @@ def lazy_network_generator(data):
     return G
 
 
-def grab_node_attributes(graph,use_distance=False,compress_to_df=False):
+def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     if use_distance:
-        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
-        nx.set_edge_attributes(G, values=G_distance_dict, name='distance')
+        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
+                           graph.edges(data='weight')}  # creates a dict of calculted distance between all nodes
+        nx.set_edge_attributes(graph, values=G_distance_dict, name='distance')
     deg = nx.degree_centrality(graph)
     between = nx.betweenness_centrality(graph)
     eig = nx.eigenvector_centrality(graph)
@@ -182,7 +186,7 @@ def grab_node_attributes(graph,use_distance=False,compress_to_df=False):
         node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
         return node_attrs_df
     else:
-        return deg_sort,between_sort,eig_sort,close_sort,clust_sort,comm_sort
+        return deg_sort, between_sort, eig_sort, close_sort, clust_sort, comm_sort
 
 
 def get_ordered_degree_list(G):
@@ -190,17 +194,20 @@ def get_ordered_degree_list(G):
     return degree_ordered
 
 
-def cluster_attributes(graph,nodes,communities,make_df=False):
-    adj_matrix = nx.to_numpy_array(graph) #Will create an adjacency matrix from the graph as a np.ndarray
+def cluster_attributes(graph, nodes, communities, make_df=False):
+    adj_matrix = nx.to_numpy_array(graph)  # Will create an adjacency matrix from the graph as a np.ndarray
     node_ROIs = nodes.values()
-    WMDz = centrality.module_degree_zscore(adj_matrix,communities,flag=0) #calculate the WMDz
-    PC = centrality.participation_coef(adj_matrix,communities,'undirected') #calculate the participation coefficient
+    WMDz = centrality.module_degree_zscore(adj_matrix, communities, flag=0)  # calculate the WMDz
+    PC = centrality.participation_coef(adj_matrix, communities, 'undirected')  # calculate the participation coefficient
     if make_df:
-        d = {'WMDz':WMDz,"PC":PC}
-        df = pd.DataFrame(d,columns=["WMDz","PC"],index=node_ROIs)
+        d = {'WMDz': WMDz, "PC": PC}
+        df = pd.DataFrame(d, columns=["WMDz", "PC"], index=node_ROIs)
         return df
     else:
-        return WMDz,PC
+        return WMDz, PC
+
+"""
+What is the purpose of this function?
 
 def findMyHubs(G):
     G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
@@ -218,6 +225,7 @@ def findMyHubs(G):
             'clustering': cluster_coefficient, 'degree_cent': degree_cent, 'communicability': communicability}
 
     Results = pd.DataFrame(dict)  # create a frame with all the measures of importance for every region
+"""
 
 def findMyHubs(node_attrs_df):
     Results = node_attrs_df
@@ -227,21 +235,27 @@ def findMyHubs(node_attrs_df):
 
     Results['Hub_Score'] = 0
     Results['Hub_Score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['Hub_Score'] + 1,
-                                Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] <= Results.Eigenvector_Centrality.quantile(.20)), Results['Hub_Score'] + 1,
-                                Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)), Results['Hub_Score'] + 1,
-                                Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)), Results['Hub_Score'] + 1,
-                                Results['Hub_Score'])
+                                    Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] <= Results.Eigenvector_Centrality.quantile(.20)),
+                                    Results['Hub_Score'] + 1,
+                                    Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)),
+                                    Results['Hub_Score'] + 1,
+                                    Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
+                                    Results['Hub_Score'] + 1,
+                                    Results['Hub_Score'])
     Results['Hub_Score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
-                                Results['Hub_Score'] + 1, Results['Hub_Score'])
+                                    Results['Hub_Score'] + 1, Results['Hub_Score'])
 
-    NonHubs = Results[(Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
+    NonHubs = Results[
+        (Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
 
-    Hubs = Results.drop(NonHubs).sort_values('Hub_Score',ascending=False)  # create a new frame with only the important nodes/ take out rois in the prior index
+    Hubs = Results.drop(NonHubs).sort_values('Hub_Score',
+                                             ascending=False)  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
+
 
 def threshold_simulation(adj_mat, a, b, x, algo='markov'):
     percentiles = [i for i in np.linspace(a, b, x)]
@@ -257,15 +271,19 @@ def threshold_simulation(adj_mat, a, b, x, algo='markov'):
         modularity = []
     return percentiles, modularity
 
-def combine_node_attrs(node_attrs_df,WMDz_PC_df,Allens,glob_eff):
-    final_df = pd.merge(node_attrs_df,WMDz_PC_df,left_index=True,right_index=True) #You need the two dfs from Results & Hubs functions
-    final_df['Allen_ROI'] = Allens #This is the list that comes from the unpickled Allen_ROI_dict
+
+def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens, glob_eff):
+    final_df = pd.merge(node_attrs_df, WMDz_PC_df, left_index=True,
+                        right_index=True)  # You need the two dfs from Results & Hubs functions
+    final_df['Allen_ROI'] = Allens  # This is the list that comes from the unpickled Allen_ROI_dict
     final_df['Delta_Global_Efficiency'] = glob_eff
-    #reorder all of the columns to your liking
-    final_df = final_df[["Allen_ROI","Degree","Betweenness","Eigenvector_Centrality","Closeness","Clustering_Coefficient","Communicability","WMDz","PC","Delta_Global_Efficiency","Hub_Score"]]
+    # reorder all of the columns to your liking
+    final_df = final_df[
+        ["Allen_ROI", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
+         "Communicability", "WMDz", "PC", "Delta_Global_Efficiency", "Hub_Score"]]
     return final_df
 
 
-def node_attrs_to_csv(final_df,folder,var_name):
+def node_attrs_to_csv(final_df, folder, var_name):
     final_df.to_csv(folder + '/' + var_name + '.csv')
     return

@@ -125,7 +125,7 @@ def louvain(graph,nodes,n_iters):
     cluster_vector_lou = np.array(cluster_vector_lou)
     cluster_vector_lou = np.reshape(cluster_vector_lou,(155,1))
     '''
-    return max_mod_lou_comm
+    # return max_mod_lou_comm
 
 
 def in_silico_deletion(G, plot=False):
