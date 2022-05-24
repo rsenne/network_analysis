@@ -17,6 +17,7 @@ from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
+import network_analysis.algorithms as algorithms
 
 
 # simple function for loading our csv file
@@ -55,9 +56,11 @@ def corrMatrix(data, z_trans=True):
     else:
         return rVal, p, p_adjusted, alpha_corrected
 
+
+#Function that will threshold R-vals on the top percentile
 def percentile(array, p):
     num_obs = int(np.size(array, 0)**2*p)
-    crit_value = -np.sort(-array.flatten())[num_obs]
+    crit_value = -np.sort(-array.flatten())[num_obs-1]
     percent_arr = np.where(array < crit_value, 0, array)
     return percent_arr
 
@@ -111,28 +114,36 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
                 #Plot the newly generated Allen ROI correlation maitrx
                 plt.figure()
-                sns.clustermap(allen_pandas,cmap='viridis',row_colors=allen_colors,col_colors=allen_colors,
+                sns.clustermap(allen_pandas,cmap='vlag',row_colors=allen_colors,col_colors=allen_colors,
                                row_cluster=False,col_cluster=False,xticklabels=False,yticklabels=False,
-                               figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
+                               figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'arctan(R)'})
                 plt.legend(handles=[cerebellum,cort_plate,cort_subplate,hypothalamus,medulla,midbrain,pallidum,pons,striatum,thalamus],
                            bbox_to_anchor=(5.0,1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix,cmap='viridis',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
+        sns.clustermap(pandas_matrix,cmap='vlag',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
         return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
 
 
 # we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel):
+def networx(corr_data, nodeLabel,drop_islands=False):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
-    graph = nx.relabel_nodes(graph, nodeLabel)
+    if nodeLabel:
+        graph = nx.relabel_nodes(graph, nodeLabel)
     # remove = [node for node, degree in graph.degree() if degree < 1]
     # graph.remove_nodes_from(remove)
+
+    graph = nx.relabel_nodes(graph, nodeLabel)
+    if drop_islands:
+        remove_node = [node for node, degree in graph.degree() if degree < 1]
+        graph.remove_nodes_from(remove_node)
+
     pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
+
 
 def lazy_network_generator(data):
     df, nodes = loadData(data)
@@ -141,31 +152,37 @@ def lazy_network_generator(data):
     G, pos = networx(threshold_matrix, nodes)
     return G
 
-def grab_node_attributes(graph):
+
+def grab_node_attributes(graph,use_distance=False,compress_to_df=False):
+    if use_distance:
+        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
+        nx.set_edge_attributes(G, values=G_distance_dict, name='distance')
     deg = nx.degree_centrality(graph)
     between = nx.betweenness_centrality(graph)
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
+    clust = nx.clustering(graph)
+    comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
-    return deg_sort, between_sort, eig_sort,close_sort
-
-def node_attrs_to_csv(nodes,deg_sort,between_sort,eig_sort,close_sort,folder,var_name):
-    ROI_index = list(nodes.values()) #Import the dictionary object with the nodes generated from the graph and make a list
-
-    #Below is a combination of node attributes into one centralized dictionary
-    node_info = {
-        'Degree' : list(deg_sort.values()),
-        'Betweenness' : list(between_sort.values()),
-        'Eigenvector Centrality' : list(eig_sort.values()),
-        'Closeness' : list(close_sort.values())
-    }
-
-    node_df = pd.DataFrame(node_info,index=ROI_index,columns=node_info.keys())
-    node_df.to_csv(folder + '/' + var_name + '.csv')
-    return node_df
+    clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
+    comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+    if compress_to_df:
+        node_info = {
+            'Degree': list(deg_sort.values()),
+            'Betweenness': list(between_sort.values()),
+            'Eigenvector_Centrality': list(eig_sort.values()),
+            'Closeness': list(close_sort.values()),
+            'Clustering_Coefficient': list(clust_sort.values()),
+            'Communicability': list(comm_sort.values())
+        }
+        ROI_index = list(graph.nodes)
+        node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
+        return node_attrs_df
+    else:
+        return deg_sort,between_sort,eig_sort,close_sort,clust_sort,comm_sort
 
 
 def get_ordered_degree_list(G):
@@ -173,16 +190,22 @@ def get_ordered_degree_list(G):
     return degree_ordered
 
 
-def cluster_attributes(graph,communities):
-    adj_matrix = nx.to_numpy_matrix(graph) #Will create an adjacency matrix from the graph
+def cluster_attributes(graph,nodes,communities,make_df=False):
+    adj_matrix = nx.to_numpy_array(graph) #Will create an adjacency matrix from the graph as a np.ndarray
+    node_ROIs = nodes.values()
     WMDz = centrality.module_degree_zscore(adj_matrix,communities,flag=0) #calculate the WMDz
     PC = centrality.participation_coef(adj_matrix,communities,'undirected') #calculate the participation coefficient
-    return WMDz,PC
+    if make_df:
+        d = {'WMDz':WMDz,"PC":PC}
+        df = pd.DataFrame(d,columns=["WMDz","PC"],index=node_ROIs)
+        return df
+    else:
+        return WMDz,PC
 
 def findMyHubs(G):
     G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
-                       G.edges(data='weight')}  # creates a dict of calculted distance between all nodes
-    nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an atribute to all nodes
+                       G.edges(data='weight')}  # creates a dict of calculated distance between all nodes
+    nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an attribute to all nodes
     cluster_coefficient = nx.clustering(G, weight='weight')  # calculated different measures of importance
     degree_cent = nx.degree_centrality(G)
     eigen_cent = nx.eigenvector_centrality(G, max_iter=100000, weight='weight')
@@ -196,25 +219,53 @@ def findMyHubs(G):
 
     Results = pd.DataFrame(dict)  # create a frame with all the measures of importance for every region
 
+def findMyHubs(node_attrs_df):
+    Results = node_attrs_df
     # Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
     # used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
     # For each significant measure an ROI has add one in the score column, a score >= 2 is considered a hub node.
-    Results['score'] = 0
-    Results['score'] = np.where((Results['eigen_cent'] > Results.eigen_cent.quantile(0.80)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['eigen_cent'] < Results.eigen_cent.quantile(.20)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['betweenness'] >= Results.betweenness.quantile(0.80)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['clustering'] <= Results.clustering.quantile(.20)), Results['score'] + 1,
-                                Results['score'])
-    Results['score'] = np.where((Results['communicability'] >= Results.communicability.quantile(.80)),
-                                Results['score'] + 1, Results['score'])
 
-    NonHubs = Results[(Results['score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
+    Results['Hub_Score'] = 0
+    Results['Hub_Score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] <= Results.Eigenvector_Centrality.quantile(.20)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)), Results['Hub_Score'] + 1,
+                                Results['Hub_Score'])
+    Results['Hub_Score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
+                                Results['Hub_Score'] + 1, Results['Hub_Score'])
 
-    Hubs = Results.drop(NonHubs,
-                        errors='ignore')  # create a new frame with only the important nodes/ take out rois in the prior index
+    NonHubs = Results[(Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
+
+    Hubs = Results.drop(NonHubs).sort_values('Hub_Score',ascending=False)  # create a new frame with only the important nodes/ take out rois in the prior index
 
     return Results, Hubs
 
+def threshold_simulation(adj_mat, a, b, x, algo='markov'):
+    percentiles = [i for i in np.linspace(a, b, x)]
+    thresholded_arrays = [percentile(adj_mat, p) for p in percentiles]
+    if algo == 'markov':
+        modularity = []
+        for thresh in thresholded_arrays:
+            print(thresh)
+            G, _ = networx(thresh, nodeLabel=None)
+            _, mc_clusters = algorithms.markov(G)
+            modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
+    else:
+        modularity = []
+    return percentiles, modularity
+
+def combine_node_attrs(node_attrs_df,WMDz_PC_df,Allens,glob_eff):
+    final_df = pd.merge(node_attrs_df,WMDz_PC_df,left_index=True,right_index=True) #You need the two dfs from Results & Hubs functions
+    final_df['Allen_ROI'] = Allens #This is the list that comes from the unpickled Allen_ROI_dict
+    final_df['Delta_Global_Efficiency'] = glob_eff
+    #reorder all of the columns to your liking
+    final_df = final_df[["Allen_ROI","Degree","Betweenness","Eigenvector_Centrality","Closeness","Clustering_Coefficient","Communicability","WMDz","PC","Delta_Global_Efficiency","Hub_Score"]]
+    return final_df
+
+
+def node_attrs_to_csv(final_df,folder,var_name):
+    final_df.to_csv(folder + '/' + var_name + '.csv')
+    return
