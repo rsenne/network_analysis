@@ -15,3 +15,4 @@ test.py
 wholebrainTools.py
 main.py
 .DS_Store
+*.pyc

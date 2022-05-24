@@ -59,13 +59,12 @@ def hierarch_clust(graph, nodes, allen_groups, plot=False):
     return df_clust_cuts,modularities,clust_assigns,sorted(list(clusters)),clust_vector_hc
 
 
-def markov(graph,nodes):
+def markov(graph, nodes):
     matrix = nx.to_scipy_sparse_array(graph)  # Will generate an adjacency matrix from the graph
     #Run the clustering algorithm using a range of inflation values and calculate the max modularity with inflation
     inflation_values = []
     modularity_values = []
     for inflation in [i / 10 for i in range(15, 135, 5)]:
-        print(inflation)
         result = mc.run_mcl(matrix, inflation=inflation)
         clusters = mc.get_clusters(result)
         Q = mc.modularity(matrix=result, clusters=clusters)
