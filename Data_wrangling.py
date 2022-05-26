@@ -13,6 +13,7 @@ from PyQt5 import Qt as PyQt5_Qt
 import datetime
 import pickle
 import itertools
+import warnings
 
 """
 FUNCTIONS
@@ -383,6 +384,7 @@ def data_wrangling(filepath, bilateral = False, ROI = False):
             right_df = df[~split_bool]
             right_df["name"] = right_df["name"].map(lambda x: x.lstrip('right'))
             merged_df = pd.merge(left_df, right_df, how="inner", on=["name", "filename", "animal", "condition"], suffixes=("_Left", "_Right"))
+            merged_df=merged_df.fillna(0)
             merged_df["Bilateral Density (cells/mm^3)"] = merged_df[["density (cells/mm^3)_Left", "density (cells/mm^3)_Right"]].mean(
                             axis=1)
             merged_df = merged_df[["filename","condition", "animal", "name", "acronym_Left", "Bilateral Density (cells/mm^3)"]]
@@ -398,7 +400,7 @@ def data_wrangling(filepath, bilateral = False, ROI = False):
             new_df.reset_index(drop=True, inplace=True)
             data_prewrangled[exp] = new_df
     if not ROI:
-        data_wrangled = data_prewrangled
+        data_wrangled = {exp:df[sorted(cols)] for exp,df in data_prewrangled.items()}
         print("Any ROIs.csv file have been found in the folder or you don't want anatomical organization, "
               "data won't be reorganized accordingly")
     else:
@@ -427,7 +429,7 @@ def data_wrangling(filepath, bilateral = False, ROI = False):
                 data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network.csv'), index = False)
     return data_wrangled
 
-def dataManager(filepath = None, bilateral = False, ROI = False, processed = False):
+def dataManager(filepath = None, results_folder = None, bilateral = False, ROI = False, processed = False, mean = False, ignore_zeros = True):
     """
     Function that calls all the other functions for the data wrangling, also determines the
     filepath and output_folder
@@ -436,6 +438,8 @@ def dataManager(filepath = None, bilateral = False, ROI = False, processed = Fal
     ----------
     filepath: string containing the path were the csv files and the ROI file are located
     or None (the GUI would be used)
+    results_folder:string containing the path were the results want to be placed
+    or None (new one with the date will be created)
     Bilateral: Boolean that defines if you can to do bilateral analyses or all combine.
                 True: separate left and right
                 False: mean of left and right
@@ -443,6 +447,7 @@ def dataManager(filepath = None, bilateral = False, ROI = False, processed = Fal
     processed: Boolean that if you want to select the pickle of the data_wrangled for doing the network
                 True: selection pickle
                 False: data wrangling
+    mean : Boolean if you want the eamn of your data
     Returns
     -------
     dict or None
@@ -460,19 +465,49 @@ def dataManager(filepath = None, bilateral = False, ROI = False, processed = Fal
         filepath = filepath[0] if not filepath == None and len(
             filepath) == 1 else sys.exit(''.join(('[Error] ',
                                                   'Only one output folder must be selected.')))
-    results_folder = os.path.join(filepath, '_'.join((
-        datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
-        'network_analysis_plots')))
-    os.mkdir(results_folder)
+    if not results_folder:
+        results_folder = os.path.join(filepath, '_'.join((
+            datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
+            'network_analysis_plots')))
+        os.mkdir(results_folder)
     if not processed:
         data_wrangled = data_wrangling(filepath, bilateral, ROI)
     else:
         data_wrangled = pickle_load(filefolderManager('file')[0])
-    return data_wrangled, filepath, results_folder
+    if mean:
+        data_mean = {}
+        for exp in data_wrangled.keys():
+            if ignore_zeros:
+                data_wrangled[exp] = data_wrangled[exp].fillna(0)
+            dm = pd.DataFrame([data_wrangled[exp].mean().index,data_wrangled[exp].mean().values])
+            cols = dm.iloc[0]
+            dm = dm[1:]
+            dm.columns = cols
+            data_mean[exp] = dm
+    else:
+        data_mean = None
+    return data_wrangled, filepath, results_folder, data_mean
+
+def ag_pickle(Allen_areas_dict_filepath = ''):
+    if not Allen_areas_dict_filepath:
+        ROIs = pickle_load(filefolderManager('file')[0], version_warning= False)
+    else:
+        ROIs = pickle_load(Allen_areas_dict_filepath, version_warning= False)
+    Allen_Groups = list(ROIs.values())
+    return ROIs, Allen_Groups
+
+def get_ROIs_dict(filepath):
+    files = [filepath + '/' + f for f in os.listdir(filepath) if f.endswith('ROIs_dict.pickle')]
+    if files:
+        ROIs_dict = pickle_load(files[0])
+    else:
+        ROIs_dict = None
+        print('There is not ROIs_dict.pickle in your filepath folder')
+    return ROIs_dict
 
 """
 TEST
 """
 
-filepath = input('Copy manually your filepath, if you want to use the GUI leave it blank')
-data_wrangled, filepath, results_folder = dataManager(filepath, bilateral = False, ROI = False, processed =False)
+filepath = 'C:/Users/cds4/Desktop/Network'
+data_wrangled, filepath, results_folder, data_mean = dataManager(filepath, bilateral = False, ROI = False, processed =False, mean = True)
