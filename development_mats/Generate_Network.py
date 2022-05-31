@@ -1,21 +1,16 @@
 #Unpickle the ROI dictionary
 import pickle as pkl
-
-import pandas as pd
-from varname import nameof
 with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
 
 #Then get that data
-ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2 Small Box/ChR2_Large_Network_Small_Box.csv')
-Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control Small Box /Control_Large_Network.csv')
+ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2_Large_Box/ChR2_Large_Network_LargeBox.csv')
+Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Large_Box/Control_Large_Network_LargeBox.csv')
 
 #Get the correlation and adjusted p values for data_ChR2 and data_Control
-ChR2_rVal,ChR2_p_raw,ChR2_p_adj, ChR2_alpha = corrMatrix(ChR2_raw_data)
-Control_rVal,Control_p_raw,Control_p_adj, Control_alpha = corrMatrix(Control_raw_data)
-
-#Will take the top 20% of the weighted edges in the threshold matrix
+ChR2_rVal,ChR2_p_raw,ChR2_p_adj,ChR2_alpha = corrMatrix(ChR2_raw_data)
+Control_rVal,Control_p_raw,Control_p_adj,Control_alpha = corrMatrix(Control_raw_data)
 
 #After getting the rVal and adjust p-values, then run the function to check for significance and generate the corr matrices with all non-zero values
 ChR2_threshold_matrix,ChR2_pandas = significanceCheck(ChR2_p_adj, ChR2_rVal, alpha=ChR2_alpha, threshold=0.0,
@@ -24,12 +19,12 @@ Control_threshold_matrix,Control_pandas = significanceCheck(Control_p_adj,Contro
                                                                    names=Control_nodes, plot=True, include_Negs=True, Anatomy=ROIs)
 
 #A threshold array to look at the top 20% magnitude edges
-ChR2_percent_array = percentile(ChR2_threshold_matrix,.20)
-Control_percent_array = percentile(Control_threshold_matrix,.20)
+ChR2_percent_array = percentile(ChR2_threshold_matrix,.10)
+Control_percent_array = percentile(Control_threshold_matrix,.10)
 
 #Using the generated correlation matrices, build a graph using networkx
-ChR2_graph, ChR2_pos = networx(ChR2_percent_array,ChR2_nodes)
-Control_graph, Control_pos = networx(Control_percent_array,Control_nodes)
+ChR2_graph,ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
+Control_graph,Control_pos = networx(Control_threshold_matrix,Control_nodes)
 
 #Run some hierarchical clustering
 ChR2_hc_cuts_df,ChR2_hc_mods,ChR2_hc_assigns,ChR2_hc_clusters= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
@@ -47,6 +42,10 @@ plt.legend(loc='upper right')
 #Run some markov clustering
 ChR2_markov_df,ChR2_markov_clusters,ChR2_markov_vector = markov(ChR2_graph,ChR2_nodes)
 Control_markov_df,Control_markov_clusters,Control_markov_vector = markov(Control_graph,Control_nodes)
+
+#With markov clustering, you can pass the clustering algorithm into a threshold function to examine how modularity is affected by edges
+ChR2_mc_percentiles,ChR2_mc_modularity = threshold_simulation(ChR2_threshold_matrix,.05,.20,5)
+Control_mc_percentiles,Control_mc_modularity = threshold_simulation(Control_threshold_matrix,.05,.20,5)
 
 #Run louvain clustering
 ChR2_lou_clust = louvain(ChR2_graph,ChR2_nodes)

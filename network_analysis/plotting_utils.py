@@ -83,6 +83,3 @@ def graph_network(G, color_list, pos_dict):
     plt.show()
     plt.axis('off')
     return
-
-
-

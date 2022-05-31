@@ -170,13 +170,13 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
     clust = nx.clustering(graph)
-    comm = nx.communicability_betweenness_centrality(graph)
+    #comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
     clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
-    comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+    #comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
     if compress_to_df:
         node_info = {
             'Degree': list(deg_sort.values()),
@@ -184,13 +184,13 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
             'Eigenvector_Centrality': list(eig_sort.values()),
             'Closeness': list(close_sort.values()),
             'Clustering_Coefficient': list(clust_sort.values()),
-            'Communicability': list(comm_sort.values())
+            #'Communicability': list(comm_sort.values())
         }
         ROI_index = list(graph.nodes)
         node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
         return node_attrs_df
     else:
-        return deg_sort, between_sort, eig_sort, close_sort, clust_sort, comm_sort
+        return deg_sort, between_sort, eig_sort, close_sort, clust_sort
 
 
 def get_ordered_degree_list(G):
@@ -249,8 +249,8 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
-                                    Results['Hub_Score'] + 1, Results['Hub_Score'])
+    '''Results['Hub_Score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
+                                    Results['Hub_Score'] + 1, Results['Hub_Score'])'''
 
     NonHubs = Results[
         (Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
@@ -284,7 +284,7 @@ def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens, glob_eff):
     # reorder all of the columns to your liking
     final_df = final_df[
         ["Allen_ROI", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
-         "Communicability", "WMDz", "PC", "Delta_Global_Efficiency", "Hub_Score"]]
+         "WMDz", "PC", "Delta_Global_Efficiency", "Hub_Score"]]
     return final_df
 
 
