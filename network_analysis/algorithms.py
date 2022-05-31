@@ -138,9 +138,6 @@ def louvain(graph,nodes,n_iters):
     return max_mod_lou_comm,lou_max_mod,lou_mod_mean,cluster_vector_lou
 
 
-
-
-
 def in_silico_deletion(G, plot=False):
     degree_list = [degree for degree in dict(G.degree).values()]
     og_global_eff = nx.global_efficiency(G)
