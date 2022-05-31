@@ -81,7 +81,6 @@ Olfactory areas,OLF,Cortical plate
 Orbital area,ORB,Cortical plate
 Olfactory tubercle,OT,Striatum
 Vascular organ and of lamina terminalis,OV,Hypothalamus
-Prelimbic area,PL,Cortical plate
 "Pons, motor related",P-mot,Pons
 "Pons, behavioral state related",P-sat,Pons
 "Pons, sensory related",P-sen,Pons
@@ -95,6 +94,7 @@ Posterodorsal preoptic nucleus,PD,Hypothalamus
 Perirhinal area,PERI,Cortical plate
 Parafascicular nucleus,PF,Thalamus
 Posterior hypothalamic nucleus,PH,Hypothalamus
+Prelimbic area,PL,Cortical plate
 Dorsal premammillary nucleus,PMd,Hypothalamus
 Ventral premammillary nucleus,PMv,Hypothalamus
 Paranigral nucleus,PN,Midbrain
