@@ -164,7 +164,7 @@ def shortest(G):
 #Function to calculate shortest path of each node
     short = nx.floyd_warshall_numpy(G, weight='weight')
     shortavg = np.mean(short, axis = 0)
-    keys = sigData.index.values.tolist()
+    keys = threshold_matrix.index.values.tolist()
     vals = shortavg.tolist()
     zip_iterator = zip(keys, vals)
     short_dictionary = dict(zip_iterator)
