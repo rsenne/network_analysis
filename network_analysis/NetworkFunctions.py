@@ -160,6 +160,18 @@ def lazy_network_generator(data):
     return G
 
 
+def shortest(G):
+#Function to calculate shortest path of each node
+    short = nx.floyd_warshall_numpy(G, weight='weight')
+    shortavg = np.mean(short, axis = 0)
+    keys = sigData.index.values.tolist()
+    vals = shortavg.tolist()
+    zip_iterator = zip(keys, vals)
+    short_dictionary = dict(zip_iterator)
+    
+    return short_dictionary
+
+
 def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     if use_distance:
         G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
@@ -170,6 +182,7 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
     clust = nx.clustering(graph)
+    short_avg = shortest(G)
     #comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
@@ -177,6 +190,7 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
     clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
     #comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+    short_sort = {area: val for area, val in sorted(short_avg.items(), key=lambda ele: ele[0])}         #included shortest path for hub detection
     if compress_to_df:
         node_info = {
             'Degree': list(deg_sort.values()),
@@ -184,6 +198,7 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
             'Eigenvector_Centrality': list(eig_sort.values()),
             'Closeness': list(close_sort.values()),
             'Clustering_Coefficient': list(clust_sort.values()),
+            'Avg_shortest_Path': list(short_sort.values()),
             #'Communicability': list(comm_sort.values())
         }
         ROI_index = list(graph.nodes)
@@ -249,7 +264,7 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    '''Results['Hub_Score'] = np.where((Results['Communicability'] >= Results.Communicability.quantile(.80)),
+    '''Results['Hub_Score'] = np.where((Results['Avg_shortest_Path'] >= Results.Avg_Shortest_Path.quantile(.80)),       #here is the adding function for shortest path
                                     Results['Hub_Score'] + 1, Results['Hub_Score'])'''
 
     NonHubs = Results[
@@ -291,3 +306,11 @@ def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens, glob_eff):
 def node_attrs_to_csv(final_df, folder, var_name):
     final_df.to_csv(folder + '/' + var_name + '.csv')
     return
+
+
+def gephiMyNetwork(threshold_matrix):
+    
+    Gg = nx.to_networkx_graph(threshold_matrix)  #I dont know why but gephi function only works when we make the network through here, but everything is the same.
+    path = '/Users/albitcabanmurillo/Downloads/CFOS_networks/Networks_clean/Gephi_all_nodes_network_test.gexf'
+    nx.write_gexf(Gg, path)
+    
