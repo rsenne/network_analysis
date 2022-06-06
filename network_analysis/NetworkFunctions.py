@@ -35,6 +35,25 @@ def loadData(data):
     return data, nodes
 
 
+def comp_conds(nodes,data1,data2):
+    nodes = list(nodes.values())
+    H_stat = []
+    p_val = []
+    for node in nodes:
+        array1 = np.array(data1[node])
+        array2 = np.array(data2[node])
+
+        H,p = stats.kruskal(array1,array2)
+        H_stat.append(H)
+        p_val.append(p)
+
+    d = {"H statistic": H_stat, "p value": p_val}
+    df_stats = pd.DataFrame(d,columns=["H statistic","p value"],index=nodes)
+    df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
+
+    return df_stats
+
+
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
 def corrMatrix(data, corr_type='Pearson', z_trans=True):

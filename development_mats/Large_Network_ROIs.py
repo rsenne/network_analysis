@@ -105,7 +105,7 @@ Control.columns = Control.columns.get_level_values(1)
 Control.reset_index(drop = True, inplace = True)
 
 #Here are the ROIs by Allen Brain Group that we want to organize
-ROIs = pd.read_csv("/Users/kaitlyndorst/Desktop/Data_Analyses/Networks/Network Wrangling/ROIs.csv").loc[:,["Abbreviation","Allen Group Name"]]
+ROIs = pd.read_csv("/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ROIs.csv").loc[:,["Abbreviation","Allen Group Name"]]
 ROIs_dict = dict(ROIs.values)
 
 #Picking the dictionary
