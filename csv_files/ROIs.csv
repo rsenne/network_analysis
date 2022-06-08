@@ -1,11 +1,10 @@
-Brain Region,Abbreviation,Allen Group Name
+Brain Region,Abbreviation,Allen Area
 Anterior amygdalar area,AAA,Striatum
 Anterior cingulate area,ACA,Cortical plate
 Nucleus accumbens,ACB,Striatum
 Anterior hypothalamic nucleus,AHN,Hypothalamus
 Agranular insular area,AI,Cortical plate
 Anterior tegmental nucleus,AT,Midbrain
-Anterior group of the dorsal thalamus,ATN,Thalamus
 Auditory areas,AUD,Cortical plate
 Anteroventral preoptic nucleus,AVP,Hypothalamus
 Anteroventral periventricular nucleus,AVPV,Hypothalamus
@@ -17,8 +16,10 @@ Field CA1,CA1,Cortical plate
 Field CA2,CA2,Cortical plate
 Field CA3,CA3,Cortical plate
 Central amygdalar nucleus,CEA,Cortical subplate
-Clasutrum,CLA,Cortical subplate
+Central lateral nucleus of the thalamus,CL,Thalamus
+Claustrum,CLA,Cortical subplate
 Central linear nucleus raphe,CLI,Midbrain
+Central medial nucleus of the thalamus,CM,Thalamus
 Caudoputamen,CP,Striatum
 Superior central nucleus raphe,CS,Pons
 Cuneiform nucleus,CUN,Midbrain
@@ -30,11 +31,9 @@ Ectorhinal area,ECT,Cortical plate
 Entorhinal area,ENT,Cortical plate
 Endopiriform nucleus,EP,Cortical subplate
 Edinger-Westphal nucleus,EW,Midbrain
-Fasicola cinerea,FC,Cortical plate
+Fasciola cinerea,FC,Cortical plate
 Fastigial nucleus,FN,Cerebellum
 Fundus of striatum,FS,Striatum
-"Geniculate group, dorsal thalamus",GENd,Thalamus
-"Geniculate group, ventral thalamus",GENv,Thalamus
 "Globus pallidus, external segment",GPe,Pallidum
 "Globus pallidus, internal segment",GPi,Pallidum
 Gustatory areas,GU,Cortical plate
@@ -44,25 +43,21 @@ Inferior colliculus,IC,Midbrain
 Interfascicular nucleus raphe,IF,Midbrain
 Induseum griseum,IG,Cortical plate
 Infralimbic area,ILA,Cortical plate
-Intralaminar nuclei of the dorsal thalamus,ILM,Thalamus
-Interstitial nucleus of Cajal,INC,Midbrain
 Interposed nucleus,IP,Cerebellum
 Interpeduncular nucleus,IPN,Midbrain
 Lateral amygdalar nucleus,LA,Cortical subplate
-Lateral group of the dorsal thalamus,LAT,Thalamus
 Locus ceruleus,LC,Pons
-Lateral dorsal nucleus of the thalamus,LD,Thalamus
+Lateral dorsal nucleus of thalamus,LD,Thalamus
 Lateral habenula,LH,Thalamus
 Lateral hypothalamic area,LHA,Hypothalamus
 Lateral preoptic area,LPO,Hypothalamus
-Latearl septal nucleus,LS,Striatum
+Lateral septal nucleus,LS,Striatum
 Magnocellular nucleus,MA,Pallidum
-Medial accessory oculomotor nucleus,MA3,Midbrain
+Medial accesory oculomotor nucleus,MA3,Midbrain
 Mammillary body,MBO,Hypothalamus
-Mediodorsal nucleus of the thalamus,MD,Thalamus
+Mediodorsal nucleus of thalamus,MD,Thalamus
 Median eminence,ME,Hypothalamus
 Medial amygdalar nucleus,MEA,Cortical subplate
-Medial group of the dorsal thalamus,MED,Thalamus
 Median preoptic nucleus,MEPO,Hypothalamus
 Midbrain trigeminal nucleus,MEV,Midbrain
 Medial habenula,MH,Thalamus
@@ -75,12 +70,11 @@ Medial septal nucleus,MS,Pallidum
 "Medulla, behavioral state related",MY-sat,Medulla
 "Medulla, sensory related",MY-sen,Medulla
 Nucleus of the brachium of the inferior colliculus ,NB,Midbrain
-Nucleus of Darkschewitsch,ND,Midbrain
 Diagonal band nucleus,NDB,Pallidum
 Olfactory areas,OLF,Cortical plate
 Orbital area,ORB,Cortical plate
 Olfactory tubercle,OT,Striatum
-Vascular organ and of lamina terminalis,OV,Hypothalamus
+Vascular organ and of the lamina terminalis,OV,Hypothalamus
 "Pons, motor related",P-mot,Pons
 "Pons, behavioral state related",P-sat,Pons
 "Pons, sensory related",P-sen,Pons
@@ -102,7 +96,6 @@ Postsubiculum,POST,Cortical plate
 Peripeduncular nucleus,PP,Thalamus
 Pedunculopontine nucleus,PPN,Midbrain
 Perireunensis nucleus,PR,Thalamus
-Precommissural nucleus,PRC,Midbrain
 Presubiculum,PRE,Cortical plate
 Pretectal region,PRT,Midbrain
 Parastrial nucleus,PS,Hypothalamus
@@ -113,10 +106,10 @@ Paraventricular nucleus of the thalamus,PVT,Thalamus
 Periventricular zone,PVZ,Hypothalamus
 Perifornical nucleus,PeF,Hypothalamus
 Prosubiculum,ProS,Cortical plate
-Rostral linear nucleus raphe,RCH,Midbrain
-Retrochiasmic area,RE,Hypothalamus
-Nucleus of reuniens,RH,Thalamus
-Rhomboid nucleus,RL,Thalamus
+Retrochiasmic area,RCH,Hypothalamus
+Nucleus of reuniens,RE,Thalamus
+Rhomboid nucleus,RH,Thalamus
+Rostral linear nucleus raphe,RL,Midbrain
 Red nucleus,RN,Midbrain
 "Midbrain reticular nucleus, retrorubral area",RR,Midbrain
 Retrosplenial area,RSP,Cortical plate
@@ -134,10 +127,9 @@ Substantia innominata,SI,Pallidum
 "Substantia nigra, reticular part",SNr,Midbrain
 Subparafascicular area,SPA,Thalamus
 Subparafascicular nucleus,SPF,Thalamus
-Somatosensory areas,SS,Thalamus
+Somatosensory areas,SS,Cortical plate
 Subthalamic nucleus,STN,Hypothalamus
 Subiculum,SUB,Cortical plate
-Supraoculomotor periaqueductal gray,Su3,Midbrain
 Temporal association areas,TEa,Cortical plate
 Triangular nucleus of septum,TRS,Pallidum
 Tuberal nucleus,TU,Hypothalamus

@@ -20,8 +20,8 @@ def collect_csvs(filepath):
     return df
 
 #Get each df for Control and ChR2 group and sort them by name
-df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Network_csv/Control_animals").sort_values(by = ["name","filename"])
-df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/Network_csv/ChR2_animals").sort_values(by = ["name","filename"])
+df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/ChR2_Small_Box/data").sort_values(by = ["name","filename"])
+df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Control_Small_Box/data").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe
 discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","Isocortex","Cerebellar","Cerebellum","Thalamus",
@@ -33,7 +33,7 @@ discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","
            "intermediate part","Interpeduncular nucleus,","Inferior colliculus,","division","like","lobule","visual","Abducens",
            "Ammon","Anterior area","olfactory","pretectal","posterior commisure","optic tract","Anterodorsal","Anteromedial",
            "Anteroventral nucleus","Arcuate","Supraoptic","Paraventricular hypothalamic","postrema","prostriata","Barrington",
-           "ochlear","Crus","Culmen","Cuneate","Copula","Cortical amygdalar","Central lateral","Central medial","Dorsal cochlear",
+           "ochlear","Crus","Culmen","Cuneate","Copula","Cortical amygdalar","Dorsal cochlear",
            "Dorsal column","vagus","peduncular area","auditory","Dorsal tegmental","Periventricular region","Ethmoid",
            "External","Facial","Forel","locculus","Gigantocellular","Gracile","Hippocamp","ypoglossal","lateral zone",
            "medial zone","olivary","salivatory","Infracerebellar","Interantero","leaflet","Intermedi","Intertrigeminal",
@@ -46,7 +46,9 @@ discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","
            "transition","Principal sensory","Retrohippocampal","Retroparafascicular","Subceruleus nucleus","Subcommissural",
            "Subgeniculate","Sublaterodorsal","Submedial","Suprage","Supratrigeminal","Taenia tecta","Tegmental reticular",
            "Ventral cochlear","Ventral group","Ventral posterolateral","Ventral posteromedial","Vestibular nuclei","Oculomotor",
-           "Nucleus of the posterior","Postrhinal"]
+           "Nucleus of the posterior","Postrhinal","Anterior group of the dorsal thalamus","Cajal","Precommissural",
+           "Darkschewitsch","Supraoculomotor periaqueductal gray","Intralaminar nuclei","group of the dorsal","Geniculate group",
+           ]
 
 
 #Create new dataframes after dropping the lines in the discard list
@@ -122,5 +124,5 @@ ChR2 = ChR2[cols]
 Control = Control[cols]'''
 
 #Turn the final ChR2 and Control dfs into .csv files to send to Ryan
-ChR2.to_csv("/Users/kaitlyndorst/Desktop/Network_csv/ChR2_animals/ChR2_Large_Network.csv", index = False)
-Control.to_csv("/Users/kaitlyndorst/Desktop/Network_csv/Control_animals/Control_Large_Network.csv", index = False)
+ChR2.to_csv("/Users/kaitlyndorst/Desktop/ChR2_Small_Box/ChR2_Small_Box.csv", index = False)
+Control.to_csv("/Users/kaitlyndorst/Desktop/Control_Small_Box/Control_Small_Box.csv", index = False)
