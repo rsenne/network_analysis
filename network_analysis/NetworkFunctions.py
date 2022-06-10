@@ -160,7 +160,7 @@ def lazy_network_generator(data):
     return G
 
 
-def shortest(G):
+def shortest(G, threshold_matrix):
 #Function to calculate shortest path of each node
     short = nx.floyd_warshall_numpy(G, weight='weight')
     shortavg = np.mean(short, axis = 0)
@@ -182,7 +182,7 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
     clust = nx.clustering(graph)
-    short_avg = shortest(G)
+    short_avg = shortest(graph)
     #comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
@@ -308,9 +308,8 @@ def node_attrs_to_csv(final_df, folder, var_name):
     return
 
 
-def gephiMyNetwork(threshold_matrix):
-    
-    Gg = nx.to_networkx_graph(threshold_matrix)  #I dont know why but gephi function only works when we make the network through here, but everything is the same.
-    path = '/Users/albitcabanmurillo/Downloads/CFOS_networks/Networks_clean/Gephi_all_nodes_network_test.gexf'
+def gephiMyNetwork(threshold_matrix, path):
+    # I don't know why but gephi function only works when we make the network through here, but everything is the same.
+    Gg = nx.to_networkx_graph(threshold_matrix)
     nx.write_gexf(Gg, path)
     

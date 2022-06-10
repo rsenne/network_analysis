@@ -33,7 +33,7 @@ def sunflower_theta(n):
     return 2 * np.pi / golden_ratio * n
 
 
-def sunflower_r(n, c=1.5):
+def sunflower_r(n, c=1.8):
     return c * (n ** 0.5)
 
 
