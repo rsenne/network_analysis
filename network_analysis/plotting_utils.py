@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from scipy import stats
 from matplotlib import pyplot as plt
 
 
@@ -82,4 +83,29 @@ def graph_network(G, color_list, pos_dict):
     fig.tight_layout()
     plt.show()
     plt.axis('off')
+    return
+
+def plot_degree_distribution(G):
+    fig, ax = plt.subplots()
+    degree_values = list(dict(G.degree()).values())
+    kde = stats.gaussian_kde(degree_values)
+    kde_lin = np.linspace(np.min(degree_values), np.max(degree_values), 1000)
+    ax.hist(degree_values, density=True)
+    ax.plot(kde_lin, kde(kde_lin))
+    ax.plot()
+    return
+
+def plot_r_distributions(adj1, adj2):
+    fig, ax = plt.subplots()
+    bins = np.arange(-1, 7, 0.1)
+    ax.hist(adj1.flatten(), density=True, bins=bins, align='mid', color='cornflowerblue', alpha=0.7)
+    ax.hist(adj2.flatten(), density=True, bins=bins, align='mid', color='tomato', alpha=0.7)
+    kde = stats.gaussian_kde(adj1.flatten())
+    kde2 = stats.gaussian_kde(adj2.flatten())
+    kde_lin = np.linspace(-1, 6, 1000)
+    ax.plot(kde_lin, kde(kde_lin), color='cornflowerblue')
+    ax.plot(kde_lin, kde2(kde_lin), color='tomato')
+    return
+
+def plot_network_statistic(G, ):
     return

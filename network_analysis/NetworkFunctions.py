@@ -208,9 +208,20 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
         return deg_sort, between_sort, eig_sort, close_sort, clust_sort
 
 
-def get_ordered_degree_list(G):
-    degree_ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
-    return degree_ordered
+def get_ordered_list(G, stat='Degree'):
+    if stat == 'Degree':
+        ordered = {k: v for k, v in sorted(dict(G.degree()).items(), key=lambda item: item[1])}
+    elif stat == 'WeightedDegree':
+        ordered = {k: v for k, v in sorted(dict(G.degree(weight='weight')).items(), key=lambda item: item[1])}
+    elif stat == 'EigCentrality':
+        ordered = {k: v for k, v in sorted(dict(nx.eigenvector_centrality(G)).items(), key=lambda item: item[1])}
+    elif stat == 'Clustering':
+        ordered = {k: v for k, v in sorted(dict(nx.clustering(G)).items(), key=lambda item: item[1])}
+    elif stat == 'Betweenness':
+        ordered = {k: v for k, v in sorted(dict(nx.betweenness_centrality(G)).items(), key=lambda item: item[1])}
+    else:
+        ordered = []
+    return ordered
 
 
 def cluster_attributes(graph, nodes, communities, make_df=False):
