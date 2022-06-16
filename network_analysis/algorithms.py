@@ -3,7 +3,7 @@ import networkx.algorithms.community as nx_comm
 import pandas as pd
 import numpy as np
 import markov_clustering as mc
-import statsmodels.api as sm
+# import statsmodels.api as sm
 import scipy.cluster.hierarchy as sch
 import random
 import seaborn as sns
@@ -144,22 +144,22 @@ def louvain(graph,nodes,n_iters):
     return max_mod_lou_comm,lou_max_mod,lou_mod_mean,cluster_vector_lou
 
 
-def in_silico_deletion(G, plot=False):
-    degree_list = [degree for degree in dict(G.degree).values()]
-    og_global_eff = nx.global_efficiency(G)
-    delta_global_eff = [abs(nx.global_efficiency(nx.from_pandas_adjacency(disruptPropagate(G, node))) - og_global_eff)
-                        for node in list(G.nodes())]
-    degree_list_const = sm.tools.add_constant(degree_list)
-    my_model = sm.OLS(delta_global_eff, degree_list_const).fit()
-    print(my_model.summary())
-    if plot:
-        sns.set()
-        fig, ax = plt.subplots()
-        plt.scatter(degree_list, delta_global_eff)
-        abline_plot(model_results=my_model, ax=ax)
-        plt.xlabel('Degree of Node Deleted')
-        plt.ylabel(r'$\Delta$' + ' ' + 'Global Efficiency')
-    return delta_global_eff
+# def in_silico_deletion(G, plot=False):
+#     degree_list = [degree for degree in dict(G.degree).values()]
+#     og_global_eff = nx.global_efficiency(G)
+#     delta_global_eff = [abs(nx.global_efficiency(nx.from_pandas_adjacency(disruptPropagate(G, node))) - og_global_eff)
+#                         for node in list(G.nodes())]
+#     degree_list_const = sm.tools.add_constant(degree_list)
+#     my_model = sm.OLS(delta_global_eff, degree_list_const).fit()
+#     print(my_model.summary())
+#     if plot:
+#         sns.set()
+#         fig, ax = plt.subplots()
+#         plt.scatter(degree_list, delta_global_eff)
+#         abline_plot(model_results=my_model, ax=ax)
+#         plt.xlabel('Degree of Node Deleted')
+#         plt.ylabel(r'$\Delta$' + ' ' + 'Global Efficiency')
+#     return delta_global_eff
 
 
 # this is the disruption propagation model from Vetere et al. 2018
@@ -283,16 +283,15 @@ def degree_preserving_randomization(G, niter=1000):
         edge2 = list(G0.edges())[r2]
         weight1 = G0.edges()[edge1[0], edge1[1]]
         weight2 = G0.edges()[edge2[0], edge2[1]]
-        if edge1[0] != edge2[0] and edge1[1] != edge2[1]:
-            if G0.has_edge(edge1[0], edge2[0]) or G0.has_edge(edge1[0], edge2[0]):
+        if edge1[0] != edge2[1] and edge1[1] != edge2[0]:
+            if G0.has_edge(edge1[0], edge2[1]) or G0.has_edge(edge1[1], edge2[0]):
                 continue
             else:
                 G0.remove_edge(edge1[0], edge1[1])
                 G0.remove_edge(edge2[0], edge2[1])
-                G0.add_edge(edge1[0], edge2[0], weight=weight1)
-                G0.add_edge(edge1[1], edge2[1], weight= weight2)
+                G0.add_edge(edge1[0], edge2[1], weight=weight1)
+                G0.add_edge(edge1[1], edge2[0], weight=weight2)
                 i += 1
-                print(i)
         else:
             continue
     return G0

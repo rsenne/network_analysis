@@ -8,8 +8,8 @@ import networkx as nx
 
 if __name__ == "__main__":
     # THIS IS FOR TEST PURPOSES ONLY
-    file = '/Users/ryansenne/PycharmProjects/networkx/csv_files/ChR2_Large_Network.csv'
-    file2 = '/USers/ryansenne/PycharmProjects/networkx/csv_files/Control_Large_Network.csv'
+    file = '/home/ryansenne/PycharmProjects/Networks2/csv_files/ChR2_Large_Network.csv'
+    file2 = '/home/ryansenne/PycharmProjects/Networks2/csv_files/Control_Large_Network.csv'
     # allen_groups = pd.read_csv('/Users/ryansenne/PycharmProjects/networkx/csv_files/ROIs.csv')
     test_data, test_nodes = net_a.loadData(file)
     rvals, p, _, _= net_a.corrMatrix(test_data)
