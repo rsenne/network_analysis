@@ -44,3 +44,4 @@ if __name__ == "__main__":
     # delta_con = net_a.Similarity(nx.adj_matrix(G), nx.adj_matrix(G1))
 z = net_a.get_ordered_list(G, 'Betweenness')
 net_a.plot_r_distributions(threshold_matrix, threshold_matrix1)
+x = net_a.degree_preserving_randomization(G, 1000)

@@ -272,3 +272,27 @@ def InverseMatrix(A):
         power += 1
 
     return S
+
+def degree_preserving_randomization(G, niter=1000):
+    G0 = G.copy()
+    i = 0
+    while i < niter:
+        r1 = np.random.randint(0, 155)
+        r2 = np.random.randint(0, 155)
+        edge1 = list(G0.edges())[r1]
+        edge2 = list(G0.edges())[r2]
+        weight1 = G0.edges()[edge1[0], edge1[1]]
+        weight2 = G0.edges()[edge2[0], edge2[1]]
+        if edge1[0] != edge2[0] and edge1[1] != edge2[1]:
+            if G0.has_edge(edge1[0], edge2[0]) or G0.has_edge(edge1[0], edge2[0]):
+                continue
+            else:
+                G0.remove_edge(edge1[0], edge1[1])
+                G0.remove_edge(edge2[0], edge2[1])
+                G0.add_edge(edge1[0], edge2[0], weight=weight1)
+                G0.add_edge(edge1[1], edge2[1], weight= weight2)
+                i += 1
+                print(i)
+        else:
+            continue
+    return G0
