@@ -1,12 +1,13 @@
 #Unpickle the ROI dictionary
 import pickle as pkl
+from scipy import stats
 with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
 
 #Then get that data
-ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2_Small_Box/ChR2_Large_Network_Small_Box.csv')
-Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Small_Box/Control_Large_Network.csv')
+ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2_Small_Box/ChR2_Small_Box.csv')
+Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Small_Box/ChR2_Large_Network_Small_Box.csv')
 
 #Function to compare densities of the raw data using a Kruskal-Wallis H test
 df_stats = comp_conds(ChR2_nodes,ChR2_raw_data,Control_raw_data)

@@ -21,7 +21,7 @@ def collect_csvs(filepath):
 
 #Get each df for Control and ChR2 group and sort them by name
 df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/ChR2_Large_Box/data").sort_values(by = ["name","filename"])
-df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Control_Large_Box/data").sort_values(by = ["name","filename"])
+df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Control_Small_Box/data").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe
 discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","Isocortex","Cerebellar","Cerebellum","Thalamus",
@@ -125,4 +125,4 @@ Control = Control[cols]'''
 
 #Turn the final ChR2 and Control dfs into .csv files to send to Ryan
 ChR2.to_csv("/Users/kaitlyndorst/Desktop/ChR2_Large_Box/ChR2_Large_Box.csv", index = False)
-Control.to_csv("/Users/kaitlyndorst/Desktop/Control_Large_Box/Control_Large_Box.csv", index = False)
+Control.to_csv("/Users/kaitlyndorst/Desktop/Control_Small_Box/Control_Small_Box.csv", index = False)
