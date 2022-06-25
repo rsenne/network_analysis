@@ -1,12 +1,16 @@
 #Unpickle the ROI dictionary
 import pickle as pkl
+from scipy import stats
 with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
 
 #Then get that data
-ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2_Large_Box/ChR2_Large_Network_LargeBox.csv')
-Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Large_Box/Control_Large_Network_LargeBox.csv')
+ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2_Small_Box/ChR2_Small_Box.csv')
+Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Small_Box/ChR2_Large_Network_Small_Box.csv')
+
+#Function to compare densities of the raw data using a Kruskal-Wallis H test
+df_stats = comp_conds(ChR2_nodes,ChR2_raw_data,Control_raw_data)
 
 #Get the correlation and adjusted p values for data_ChR2 and data_Control
 ChR2_rVal,ChR2_p_raw,ChR2_p_adj,ChR2_alpha = corrMatrix(ChR2_raw_data)
@@ -23,8 +27,8 @@ ChR2_percent_array = percentile(ChR2_threshold_matrix,.10)
 Control_percent_array = percentile(Control_threshold_matrix,.10)
 
 #Using the generated correlation matrices, build a graph using networkx
-ChR2_graph,ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)
-Control_graph,Control_pos = networx(Control_threshold_matrix,Control_nodes)
+ChR2_graph,ChR2_pos = networx(ChR2_percent_array,ChR2_nodes)
+Control_graph,Control_pos = networx(Control_percent_array,Control_nodes)
 
 #Run some hierarchical clustering
 ChR2_hc_cuts_df,ChR2_hc_mods,ChR2_hc_assigns,ChR2_hc_clusters= hierarch_clust(ChR2_graph,ChR2_nodes,ROIs.values(),plot = False)
@@ -53,7 +57,7 @@ Control_lou_clust = louvain(Control_graph,Control_nodes)
 
 #Make visuals of the graphs using the set of plot_utils functions
 #Set some parameters for spacing the nodes and getting colors according to Allen ROIs
-allen_color_list = get_allen_colors('ROIs.csv')
+allen_color_list = get_allen_colors('/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ROIs.csv')
 sunflower = sunflower_theta(155)
 sunflower_radius = sunflower_r(155,c=1.5)
 point_cloud = get_point_cloud(k=0)
