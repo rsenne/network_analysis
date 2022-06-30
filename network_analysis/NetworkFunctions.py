@@ -35,7 +35,7 @@ def loadData(data):
     return data, nodes
 
 
-def comp_conds(nodes,data1,data2):
+def comp_conds(nodes, data1, data2):
     nodes = list(nodes.values())
     H_stat = []
     p_val = []
@@ -43,12 +43,12 @@ def comp_conds(nodes,data1,data2):
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
 
-        H,p = stats.kruskal(array1,array2)
+        H, p = scipy.stats.kruskal(array1, array2)
         H_stat.append(H)
         p_val.append(p)
 
     d = {"H statistic": H_stat, "p value": p_val}
-    df_stats = pd.DataFrame(d,columns=["H statistic","p value"],index=nodes)
+    df_stats = pd.DataFrame(d, columns=["H statistic", "p value"], index=nodes)
     df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
 
     return df_stats
@@ -79,6 +79,7 @@ def corrMatrix(data, corr_type='Pearson', z_trans=True):
     elif corr_type == 'Spearman':
         rVal, pVal = scipy.stats.spearmanr(data, axis=0)
         return rVal, pVal
+
 
 # Function that will threshold R-vals on the top percentile
 def percentile(array, p):
@@ -158,17 +159,11 @@ def networx(corr_data, nodeLabel, drop_islands=False):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
     if nodeLabel:
         graph = nx.relabel_nodes(graph, nodeLabel)
-    # remove = [node for node, degree in graph.degree() if degree < 1]
-    # graph.remove_nodes_from(remove)
-
     graph = nx.relabel_nodes(graph, nodeLabel)
     if drop_islands:
         remove_node = [node for node, degree in graph.degree() if degree < 1]
         graph.remove_nodes_from(remove_node)
-
-    pos = nx.spring_layout(graph)
-    nx.set_node_attributes(graph, pos, name='pos')
-    return graph, pos
+    return graph
 
 
 def lazy_network_generator(data):
@@ -180,9 +175,9 @@ def lazy_network_generator(data):
 
 
 def shortest(G, threshold_matrix):
-#Function to calculate shortest path of each node
+    # Function to calculate shortest path of each node
     short = nx.floyd_warshall_numpy(G, weight='weight')
-    shortavg = np.mean(short, axis = 0)
+    shortavg = np.mean(short, axis=0)
     keys = threshold_matrix.index.values.tolist()
     vals = shortavg.tolist()
     zip_iterator = zip(keys, vals)
@@ -202,14 +197,15 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     close = nx.closeness_centrality(graph)
     clust = nx.clustering(graph)
     short_avg = shortest(graph)
-    #comm = nx.communicability_betweenness_centrality(graph)
+    # comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
     clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
-    #comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
-    short_sort = {area: val for area, val in sorted(short_avg.items(), key=lambda ele: ele[0])}         #included shortest path for hub detection
+    # comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+    short_sort = {area: val for area, val in
+                  sorted(short_avg.items(), key=lambda ele: ele[0])}  # included shortest path for hub detection
     if compress_to_df:
         node_info = {
             'Degree': list(deg_sort.values()),
@@ -218,7 +214,7 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
             'Closeness': list(close_sort.values()),
             'Clustering_Coefficient': list(clust_sort.values()),
             'Avg_shortest_Path': list(short_sort.values()),
-            #'Communicability': list(comm_sort.values())
+            # 'Communicability': list(comm_sort.values())
         }
         ROI_index = list(graph.nodes)
         node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
@@ -255,26 +251,6 @@ def cluster_attributes(graph, nodes, communities, make_df=False):
     else:
         return WMDz, PC
 
-"""
-What is the purpose of this function?
-
-def findMyHubs(G):
-    G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
-                       G.edges(data='weight')}  # creates a dict of calculated distance between all nodes
-    nx.set_edge_attributes(G, values=G_distance_dict, name='distance')  # sets the distance as an attribute to all nodes
-    cluster_coefficient = nx.clustering(G, weight='weight')  # calculated different measures of importance
-    degree_cent = nx.degree_centrality(G)
-    eigen_cent = nx.eigenvector_centrality(G, max_iter=100000, weight='weight')
-    betweenness = nx.betweenness_centrality(G, weight='distance', normalized=True)
-    closeness = nx.closeness_centrality(G, distance='distance')
-    degree = list(G.degree(G, weight='weight'))
-    communicability = nx.communicability_betweenness_centrality(G)
-
-    dict = {'eigen_cent': eigen_cent, 'betweenness': betweenness, 'closeness': closeness,
-            'clustering': cluster_coefficient, 'degree_cent': degree_cent, 'communicability': communicability}
-
-    Results = pd.DataFrame(dict)  # create a frame with all the measures of importance for every region
-"""
 
 def findMyHubs(node_attrs_df):
     Results = node_attrs_df
