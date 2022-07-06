@@ -17,6 +17,10 @@ from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
+<<<<<<< Updated upstream
+=======
+import network_analysis.algorithms as algorithms
+>>>>>>> Stashed changes
 import os
 
 
@@ -35,6 +39,7 @@ def loadData(data, csv = True):
     node_number = list(item for item in range(0, len(node_names)))
     nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
     return data, nodes
+
 
 
 # correlate our c-Fos counts between brain regions, df for data
@@ -115,16 +120,31 @@ def significanceCheck(p_adjusted, corr, alpha, results_folder = '', title = '', 
 
                 #Plot the newly generated Allen ROI correlation maitrx
                 plt.figure()
+<<<<<<< Updated upstream
                 sns.clustermap(allen_pandas,cmap='viridis',row_colors=allen_colors,col_colors=allen_colors,
                                row_cluster=False,col_cluster=False,xticklabels=False,yticklabels=False,
                                figsize=(10,10),cbar_pos=(0.1,0.15,.02,.4),cbar_kws={'label':'Pearson Correlation (R)'})
                 plt.legend(handles=[cerebellum,cort_plate,cort_subplate,hypothalamus,medulla,midbrain,pallidum,pons,striatum,thalamus],
                            bbox_to_anchor=(5.0,1.6))
+=======
+                sns.clustermap(allen_pandas, cmap='vlag', row_colors=allen_colors, col_colors=allen_colors,
+                               row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
+                               figsize=(10, 10), cbar_pos=(0.1, 0.15, .02, .4), cbar_kws={'label': 'arctan(R)'})
+                plt.legend(
+                    handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla, midbrain, pallidum, pons,
+                             striatum, thalamus],
+                    bbox_to_anchor=(5.0, 1.6))
+>>>>>>> Stashed changes
                 if savefig:
                     plt.savefig(os.path.join(results_folder, 'Anatomical_corr_matrix_' + title +'.png'))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
+<<<<<<< Updated upstream
         sns.clustermap(pandas_matrix,cmap='viridis',method='ward',metric='euclidean',figsize=(10,10),cbar_pos=(.9,.9,.02,.10))
+=======
+        sns.clustermap(pandas_matrix, cmap='vlag', method='ward', metric='euclidean', figsize=(10, 10),
+                       cbar_pos=(.9, .9, .02, .10))
+>>>>>>> Stashed changes
         if savefig:
             plt.savefig(os.path.join(results_folder, 'Euclidean_corr_matrix_' + title + '.png'))
         return threshold_matrix, pandas_matrix
@@ -276,6 +296,7 @@ def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens, glob_eff):
          "Communicability", "WMDz", "PC", "Delta_Global_Efficiency", "Hub_Score"]]
     return final_df
 
+#Combine with percentage of change maybe
 
 def node_attrs_to_csv(final_df, folder, var_name):
     final_df.to_csv(folder + '/' + var_name + '.csv')

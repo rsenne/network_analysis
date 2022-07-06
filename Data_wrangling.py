@@ -6,6 +6,12 @@ import time
 import functools
 from tkinter import filedialog
 import sys
+try:
+    # new location for sip
+    # https://www.riverbankcomputing.com/static/Docs/PyQt5/incompatibilities.html#pyqt-v5-11
+    from PyQt5 import sip
+except ImportError:
+    import sip
 from PyQt5.QtWidgets import (QFileDialog, QAbstractItemView, QListView,
                             QTreeView, QDialog, QApplication)
 from PyQt5.QtCore import Qt as QtCore_Qt
