@@ -56,7 +56,8 @@ def hierarch_clust(graph, nodes, allen_groups, plot=False):
 
     #Generate a N x 1 vector of cluster ids for calculating WMDz and PC using functions from bctpy
     clust_vector_hc = np.array(clust_assigns['Cluster Number'])
-    clust_vector_hc = np.reshape(clust_vector_hc,(155,1))
+    vector_length = len(nodes.keys())
+    clust_vector_hc = np.reshape(clust_vector_hc,(vector_length,1))
 
     if plot:
         plt.figure()
@@ -97,7 +98,8 @@ def markov(graph, nodes):
             else:
                 pass
     cluster_vector_mc = np.array(cluster_vector_mc)
-    cluster_vector_mc = np.reshape(cluster_vector_mc,(155,1))
+    vector_length = len(nodes.keys())
+    cluster_vector_mc = np.reshape(cluster_vector_mc,(vector_length,1))
 
     return df, mc_clusters, cluster_vector_mc
 
@@ -139,7 +141,8 @@ def louvain(graph,nodes,n_iters):
             else:
                 pass
     cluster_vector_lou = np.array(cluster_vector_lou)
-    cluster_vector_lou = np.reshape(cluster_vector_lou, (155, 1))
+    vector_length = len(nodes.keys())
+    cluster_vector_lou = np.reshape(cluster_vector_lou,(vector_length, 1))
 
     return max_mod_lou_comm,lou_max_mod,lou_mod_mean,cluster_vector_lou
 

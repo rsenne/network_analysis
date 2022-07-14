@@ -18,11 +18,11 @@ def grab_color_attributes(cluster_list, node_dict):
 
 def get_allen_colors(allen_rois):
     allen_df = pd.read_csv(allen_rois)
-    allen_list = list(set(allen_df['Allen Group Name']))
+    allen_list = list(set(allen_df['Allen Area']))
     allen_list_alphabetical = sorted(allen_list)
     allen_colors = [color for color in sns.color_palette('Set3', len(allen_list_alphabetical))]
     allen_color_dict = {group:color for group, color in zip(allen_list_alphabetical, allen_colors)}
-    allen_dict = {abbrev:name for abbrev,name in zip(allen_df['Abbreviation'], allen_df['Allen Group Name'])}
+    allen_dict = {abbrev:name for abbrev,name in zip(allen_df['Abbreviation'], allen_df['Allen Area'])}
     color_list = []
     for area in allen_dict:
         color_list.append(allen_color_dict[allen_dict[area]])
@@ -107,5 +107,5 @@ def plot_r_distributions(adj1, adj2):
     ax.plot(kde_lin, kde2(kde_lin), color='tomato')
     return
 
-def plot_network_statistic(G, ):
-    return
+'''def plot_network_statistic(G, ):
+    return'''
