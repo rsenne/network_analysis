@@ -112,5 +112,5 @@ def plot_r_distributions(adj1, adj2):
     ax.plot(kde_lin, kde2(kde_lin), color='tomato')
     return
 
-def plot_network_statistic(G, ):
-    return
+'''def plot_network_statistic(G, ):
+    return'''

@@ -7,7 +7,7 @@ Allen_Groups = list(ROIs.values())
 
 #Then get that data
 ChR2_raw_data,ChR2_nodes = loadData('/Users/kaitlyndorst/Desktop/ChR2_Small_Box/ChR2_Small_Box.csv')
-Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Small_Box/ChR2_Large_Network_Small_Box.csv')
+Control_raw_data,Control_nodes = loadData('/Users/kaitlyndorst/Desktop/Control_Small_Box/Control_Small_Box.csv')
 
 #Function to compare densities of the raw data using a Kruskal-Wallis H test
 df_stats = comp_conds(ChR2_nodes,ChR2_raw_data,Control_raw_data)
@@ -92,7 +92,7 @@ Control_final_df = combine_node_attrs(Control_Results,Control_mc_WMDz_PC_df,Alle
 
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
 node_attrs_to_csv(ChR2_final_df,'/Users/kaitlyndorst/Desktop/ChR2_Small_Box','ChR2_nodes_Small_Box')
-node_attrs_to_csv(Control_final_df,'/Users/kaitlyndorst/Desktop/Control_Small_Box ','Control_nodes_Small_Box')
+node_attrs_to_csv(Control_final_df,'/Users/kaitlyndorst/Desktop/Control_Small_Box','Control_nodes_Small_Box')
 
 #Take a holistic approach and look at all of the edges in the network instead of the strongest
 whole_ChR2_graph,whole_ChR2_pos = networx(ChR2_threshold_matrix,ChR2_nodes)

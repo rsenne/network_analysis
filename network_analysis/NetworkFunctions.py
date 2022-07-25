@@ -18,7 +18,7 @@ from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
-import network_analysis.algorithms as algorithms
+#import network_analysis.algorithms as algorithms
 
 
 # simple function for loading our csv file
@@ -43,7 +43,9 @@ def comp_conds(nodes, data1, data2):
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
 
+
         H, p = scipy.stats.kruskal(array1, array2)
+
         H_stat.append(H)
         p_val.append(p)
 
@@ -166,6 +168,7 @@ def networx(corr_data, nodeLabel, drop_islands=False):
     return graph
 
 
+
 def lazy_network_generator(data):
     df, nodes = loadData(data)
     rVal, p, p_adjusted, alpha_corrected = corrMatrix(df)
@@ -196,16 +199,11 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
     clust = nx.clustering(graph)
-    short_avg = shortest(graph)
-    # comm = nx.communicability_betweenness_centrality(graph)
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
     clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
-    # comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
-    short_sort = {area: val for area, val in
-                  sorted(short_avg.items(), key=lambda ele: ele[0])}  # included shortest path for hub detection
     if compress_to_df:
         node_info = {
             'Degree': list(deg_sort.values()),
@@ -213,8 +211,6 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
             'Eigenvector_Centrality': list(eig_sort.values()),
             'Closeness': list(close_sort.values()),
             'Clustering_Coefficient': list(clust_sort.values()),
-            'Avg_shortest_Path': list(short_sort.values()),
-            # 'Communicability': list(comm_sort.values())
         }
         ROI_index = list(graph.nodes)
         node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
@@ -290,7 +286,7 @@ def threshold_simulation(adj_mat, a, b, x, algo='markov'):
         for thresh in thresholded_arrays:
             print(thresh)
             G, _ = networx(thresh, nodeLabel=None)
-            _, mc_clusters = algorithms.markov(G)
+            _, mc_clusters = algorithms.markov(G) #use the mc library that is in algorithms
             modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
     else:
         modularity = []
@@ -314,7 +310,7 @@ def node_attrs_to_csv(final_df, folder, var_name):
     return
 
 
-def gephiMyNetwork(threshold_matrix, path):
+'''def gephiMyNetwork(threshold_matrix, path):
     # I don't know why but gephi function only works when we make the network through here, but everything is the same.
     Gg = nx.to_networkx_graph(threshold_matrix)
-    nx.write_gexf(Gg, path)
+    nx.write_gexf(Gg, path)'''
