@@ -38,9 +38,9 @@ def sunflower_r(n, c=1.8):
     return c * (n ** 0.5)
 
 
-def get_point_cloud(k=0):
+def get_point_cloud(k, c=1.8):
     n = [i for i in range(1, k + 1)]
-    r = [sunflower_r(i) for i in n]
+    r = [sunflower_r(i, c) for i in n]
     theta = [sunflower_theta(j) for j in n]
     point_cloud_x = (r * np.cos(theta))
     point_cloud_y = (r * np.sin(theta))
@@ -48,18 +48,23 @@ def get_point_cloud(k=0):
     return point_cloud
 
 
-def get_position_data(cluster_list, node_names):
+def get_position_data(cluster_list, node_names, shape='circular'):
     number_of_clusters = len(cluster_list)
     nodes_list = [x for x in range(0, number_of_clusters)]
     pos_graph = nx.Graph()
     pos_graph.add_nodes_from(nodes_list)
-    pos = nx.circular_layout(pos_graph, scale=35, dim=2)
+    if shape == 'circular':
+        pos = nx.circular_layout(pos_graph, scale=39, dim=2)
+    else:
+        pos = {i: get_point_cloud(number_of_clusters, 15)[i] for i in range(number_of_clusters)}
     num_of_nodes = [len(node) for node in cluster_list]
-    point_clouds = [get_point_cloud(lens) for lens in num_of_nodes]
+    point_clouds = [get_point_cloud(num_of_nodes[lens], 1.8) for lens in range(len(num_of_nodes)) ]
     for i in range(len(point_clouds)):
         for j in range(len(point_clouds[i])):
             point_clouds[i][j][0] += pos[i][0]
             point_clouds[i][j][1] += pos[i][1]
+    # avg_x_y = [[np.mean([point_cloud[i][0] for i in range(len(point_cloud))]), np.mean([point_cloud[i][1] for i in range(len(point_cloud))])]for point_cloud in point_clouds]
+    # radii = [np.sqrt((i[0][0]-i[-1][0])**2 + (i[-1][1]-i[0][1])**2) for i in point_clouds]
     point_cloud_map = {cluster: pos_list for cluster, pos_list in enumerate(point_clouds)}
     pos_dict = {}
     for i in range(len(cluster_list)):
@@ -73,7 +78,7 @@ def graph_network(G, color_list, pos_dict):
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
     deg = G.degree()
-    node_sizes = [degree / np.mean(list(dict(deg).values())) * 1000 for degree in dict(deg).values()]
+    node_sizes = [degree / np.mean(list(dict(deg).values())) * 750 for degree in dict(deg).values()]
     fig, ax = plt.subplots(figsize=(20, 15))
     nx.draw_networkx_edges(G, pos=pos_dict, width=1, edge_color=edge_colors, connectionstyle='arc3,rad=0.2')
     nx.draw_networkx_nodes(G, pos=pos_dict, node_size=node_sizes, node_color=color_list, linewidths=1,
@@ -81,8 +86,8 @@ def graph_network(G, color_list, pos_dict):
     nx.draw_networkx_labels(G, pos=pos_dict)
     ax.margins(0.1, 0.05)
     fig.tight_layout()
-    plt.show()
     plt.axis('off')
+    plt.show()
     return
 
 def plot_degree_distribution(G):
