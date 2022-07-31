@@ -16,9 +16,9 @@ import scipy.stats
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
-from bct.algorithms import centrality
+# from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
-#import network_analysis.algorithms as algorithms
+# import network_analysis.algorithms as algorithms
 
 
 # simple function for loading our csv file
@@ -101,6 +101,7 @@ def euclMatrix(data):
 # using this function we will threshold based off of p-values previously calculated
 def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
     p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
+    np.fill_diagonal(p_adjusted, 0)
     p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
     if not include_Negs:
         p_adjusted = np.where((corr < 0), 0, p_adjusted)
@@ -257,17 +258,17 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = 0
     Results['Hub_Score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] <= Results.Eigenvector_Centrality.quantile(.20)),
+    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] >= Results.Eigenvector_Centrality.quantile(.80)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
     Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
+    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] >= Results.Clustering_Coefficient.quantile(.80)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    '''Results['Hub_Score'] = np.where((Results['Avg_shortest_Path'] >= Results.Avg_Shortest_Path.quantile(.80)),       #here is the adding function for shortest path
-                                    Results['Hub_Score'] + 1, Results['Hub_Score'])'''
+    Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),       #here is the adding function for shortest path
+                                    Results['Hub_Score'] + 1, Results['Hub_Score'])
 
     NonHubs = Results[
         (Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness

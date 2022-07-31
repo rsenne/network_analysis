@@ -6,6 +6,15 @@ from scipy import stats
 from matplotlib import pyplot as plt
 
 
+def publication_heatmap(adj_mat, labels, save=True):
+    fig, ax = plt.subplots()
+    sns.heatmap(adj_mat, annot=labels, cmap='vlag', linewidths=0.3, ax=ax)
+    plt.show()
+    if save:
+        plt.savefig()
+    return
+
+
 def grab_color_attributes(cluster_list, node_dict):
     color_list = [color for color in sns.color_palette('colorblind', len(cluster_list))]
     color_dict = {}
@@ -21,8 +30,8 @@ def get_allen_colors(allen_rois):
     allen_list = list(set(allen_df['Allen Area']))
     allen_list_alphabetical = sorted(allen_list)
     allen_colors = [color for color in sns.color_palette('Set3', len(allen_list_alphabetical))]
-    allen_color_dict = {group:color for group, color in zip(allen_list_alphabetical, allen_colors)}
-    allen_dict = {abbrev:name for abbrev,name in zip(allen_df['Abbreviation'], allen_df['Allen Area'])}
+    allen_color_dict = {group: color for group, color in zip(allen_list_alphabetical, allen_colors)}
+    allen_dict = {abbrev: name for abbrev, name in zip(allen_df['Abbreviation'], allen_df['Allen Area'])}
     color_list = []
     for area in allen_dict:
         color_list.append(allen_color_dict[allen_dict[area]])
@@ -56,9 +65,9 @@ def get_position_data(cluster_list, node_names, shape='circular'):
     if shape == 'circular':
         pos = nx.circular_layout(pos_graph, scale=39, dim=2)
     else:
-        pos = {i: get_point_cloud(number_of_clusters, 15)[i] for i in range(number_of_clusters)}
+        pos = {i: get_point_cloud(number_of_clusters, 12)[i] for i in range(number_of_clusters)}
     num_of_nodes = [len(node) for node in cluster_list]
-    point_clouds = [get_point_cloud(num_of_nodes[lens], 1.8) for lens in range(len(num_of_nodes)) ]
+    point_clouds = [get_point_cloud(num_of_nodes[lens], 1.8) for lens in range(len(num_of_nodes))]
     for i in range(len(point_clouds)):
         for j in range(len(point_clouds[i])):
             point_clouds[i][j][0] += pos[i][0]
@@ -88,7 +97,8 @@ def graph_network(G, color_list, pos_dict):
     fig.tight_layout()
     plt.axis('off')
     plt.show()
-    return
+    return fig
+
 
 def plot_degree_distribution(G):
     fig, ax = plt.subplots()
@@ -99,6 +109,7 @@ def plot_degree_distribution(G):
     ax.plot(kde_lin, kde(kde_lin))
     ax.plot()
     return
+
 
 def plot_r_distributions(adj1, adj2):
     fig, ax = plt.subplots()
@@ -111,6 +122,7 @@ def plot_r_distributions(adj1, adj2):
     ax.plot(kde_lin, kde(kde_lin), color='cornflowerblue')
     ax.plot(kde_lin, kde2(kde_lin), color='tomato')
     return
+
 
 '''def plot_network_statistic(G, ):
     return'''
