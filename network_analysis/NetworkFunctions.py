@@ -16,7 +16,7 @@ import scipy.stats
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
-# from bct.algorithms import centrality
+from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
 # import network_analysis.algorithms as algorithms
 
@@ -267,7 +267,7 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] >= Results.Clustering_Coefficient.quantile(.80)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),       #here is the adding function for shortest path
+    Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),
                                     Results['Hub_Score'] + 1, Results['Hub_Score'])
 
     NonHubs = Results[

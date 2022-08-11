@@ -100,6 +100,39 @@ def graph_network(G, color_list, pos_dict):
     return fig
 
 
+def DG_subgraph(cluster_ids, nodes, G, pos_dict, color_list):
+    DG_tuple = [clust for clust in cluster_ids if 24 in clust]
+    DG_cluster = [node for tup in DG_tuple for node in tup]
+
+    vals = []
+    for node in DG_cluster:
+        vals.append(nodes[node])
+
+    new_color_list = []
+    for node in DG_cluster:
+        new_color_list.append(color_list[node])
+
+    sub_graph = G.subgraph(vals)
+    edge_list = list(sorted(sub_graph.edges()))
+
+    DG_graph = nx.Graph(pos=pos_dict)
+    DG_graph.add_nodes_from(sorted(G.subgraph(vals)))
+    DG_graph.add_edges_from((edge_list))
+
+    deg = DG_graph.degree()
+    node_sizes = [degree / np.mean(list(dict(deg).values())) * 1000 for degree in dict(deg).values()]
+    fig, ax = plt.subplots(figsize=(20, 15))
+    nx.draw_networkx_edges(DG_graph, pos=pos_dict, width=1, edge_color='gainsboro', connectionstyle='arc3,rad=0.2')
+    nx.draw_networkx_nodes(DG_graph, pos=pos_dict, node_size=node_sizes, node_color=new_color_list, linewidths=1,
+                           edgecolors='black')
+    nx.draw_networkx_labels(DG_graph, pos=pos_dict)
+    ax.margins(0.1, 0.05)
+    fig.tight_layout()
+    plt.axis('off')
+    plt.show()
+    return
+
+
 def plot_degree_distribution(G):
     fig, ax = plt.subplots()
     degree_values = list(dict(G.degree()).values())
