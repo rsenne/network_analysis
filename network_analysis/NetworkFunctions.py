@@ -264,7 +264,7 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] >= Results.Clustering_Coefficient.quantile(.80)),
+    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
     Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),       #here is the adding function for shortest path

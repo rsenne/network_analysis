@@ -17,6 +17,7 @@ from numpy import square
 from numpy import trace
 from numpy import amax
 from math import sqrt
+# from cock import cum
 
 
 def hierarch_clust(graph, nodes, allen_groups, plot=False):
@@ -100,11 +101,12 @@ def markov(graph, nodes):
             else:
                 pass
     clust_dict = {list(graph.nodes())[i]: {'cluster': cluster_vector_mc[i]} for i in range(len(cluster_vector_mc))}
+    node_community_dict = {list(graph.nodes())[i]: cluster_vector_mc[i] for i in range(len(cluster_vector_mc))}
     nx.set_node_attributes(graph, clust_dict)
     cluster_vector_mc = np.array(cluster_vector_mc)
     vector_length = len(nodes.keys())
     cluster_vector_mc = np.reshape(cluster_vector_mc,(vector_length,1))
-    return df, mc_clusters, cluster_vector_mc
+    return df, mc_clusters, cluster_vector_mc, node_community_dict
 
 
 def louvain(graph, nodes, n_iters):

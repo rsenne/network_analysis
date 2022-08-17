@@ -3,12 +3,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from scipy import stats
+import random
 from matplotlib import pyplot as plt
 
 
 def publication_heatmap(adj_mat, labels, save=True):
     fig, ax = plt.subplots()
-    sns.heatmap(adj_mat, annot=labels, cmap='vlag', linewidths=0.3, ax=ax)
+    sns.heatmap(adj_mat, cmap='vlag', linewidths=0.3, ax=ax)
     plt.show()
     if save:
         plt.savefig()
@@ -63,17 +64,15 @@ def get_position_data(cluster_list, node_names, shape='circular'):
     pos_graph = nx.Graph()
     pos_graph.add_nodes_from(nodes_list)
     if shape == 'circular':
-        pos = nx.circular_layout(pos_graph, scale=39, dim=2)
+        pos = nx.circular_layout(pos_graph, scale=45, dim=2)
     else:
         pos = {i: get_point_cloud(number_of_clusters, 12)[i] for i in range(number_of_clusters)}
     num_of_nodes = [len(node) for node in cluster_list]
-    point_clouds = [get_point_cloud(num_of_nodes[lens], 1.8) for lens in range(len(num_of_nodes))]
+    point_clouds = [get_point_cloud(num_of_nodes[lens], 1.5) for lens in range(len(num_of_nodes))]
     for i in range(len(point_clouds)):
         for j in range(len(point_clouds[i])):
             point_clouds[i][j][0] += pos[i][0]
             point_clouds[i][j][1] += pos[i][1]
-    # avg_x_y = [[np.mean([point_cloud[i][0] for i in range(len(point_cloud))]), np.mean([point_cloud[i][1] for i in range(len(point_cloud))])]for point_cloud in point_clouds]
-    # radii = [np.sqrt((i[0][0]-i[-1][0])**2 + (i[-1][1]-i[0][1])**2) for i in point_clouds]
     point_cloud_map = {cluster: pos_list for cluster, pos_list in enumerate(point_clouds)}
     pos_dict = {}
     for i in range(len(cluster_list)):
@@ -124,5 +123,13 @@ def plot_r_distributions(adj1, adj2):
     return
 
 
-'''def plot_network_statistic(G, ):
-    return'''
+def plot_network_statistic(node_attr_df, statistic: str = 'Degree', cutoff: float = 0.2):
+    stat = node_attr_df.loc[node_attr_df[statistic] > node_attr_df[statistic].quantile(cutoff)][statistic].sort_values(
+        ascending=False)
+    rois = list(stat.index)
+    fig, ax = plt.subplots()
+    ax.bar(rois, stat, color='cornflower', linewidth=0.1)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.xticks(rotation=45)
+    return
