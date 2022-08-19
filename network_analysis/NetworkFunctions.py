@@ -16,9 +16,8 @@ import scipy.stats
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
-# from bct.algorithms import centrality
+from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
-# import network_analysis.algorithms as algorithms
 
 
 # simple function for loading our csv file
@@ -141,18 +140,18 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
                 # Plot the newly generated Allen ROI correlation maitrx
                 plt.figure()
-                sns.clustermap(allen_pandas, cmap='vlag', row_colors=allen_colors, col_colors=allen_colors,
+                sns.clustermap(allen_pandas, cmap='viridis', row_colors=allen_colors, col_colors=allen_colors,
                                row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
-                               figsize=(10, 10), cbar_pos=(0.1, 0.15, .02, .4), cbar_kws={'label': 'arctan(R)'})
+                               figsize=(10, 10), cbar_pos=(0.1, 0.15, .02, .4), cbar_kws={'label': 'Spearman Value'})
                 plt.legend(
                     handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla, midbrain, pallidum, pons,
                              striatum, thalamus],
                     bbox_to_anchor=(5.0, 1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix, cmap='vlag', method='ward', metric='euclidean', figsize=(10, 10),
+        sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10, 10),
                        cbar_pos=(.9, .9, .02, .10))
-        return threshold_matrix, pandas_matrix
+        return threshold_matrix,pandas_matrix
     else:
         return threshold_matrix
 
@@ -267,7 +266,7 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),       #here is the adding function for shortest path
+    Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),
                                     Results['Hub_Score'] + 1, Results['Hub_Score'])
 
     NonHubs = Results[
@@ -294,15 +293,14 @@ def threshold_simulation(adj_mat, a, b, x, algo='markov'):
     return percentiles, modularity
 
 
-def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens, glob_eff):
+def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens):
     final_df = pd.merge(node_attrs_df, WMDz_PC_df, left_index=True,
                         right_index=True)  # You need the two dfs from Results & Hubs functions
     final_df['Allen_ROI'] = Allens  # This is the list that comes from the unpickled Allen_ROI_dict
-    final_df['Delta_Global_Efficiency'] = glob_eff
     # reorder all of the columns to your liking
     final_df = final_df[
         ["Allen_ROI", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
-         "WMDz", "PC", "Delta_Global_Efficiency", "Hub_Score"]]
+         "WMDz", "PC", "Hub_Score"]]
     return final_df
 
 

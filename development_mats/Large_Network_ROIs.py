@@ -16,12 +16,12 @@ def collect_csvs(filepath):
         frame["filename"] = os.path.basename(i)
         data.append(frame)
     df = pd.concat(data, ignore_index= True)
-    df = df.loc[:,["name","acronym","density (cells/mm^3)","filename"]]
+    df = df.loc[:, ["name", "acronym", "density (cells/mm^3)", "filename"]]
     return df
 
 #Get each df for Control and ChR2 group and sort them by name
-df_ChR2 = collect_csvs("/Users/kaitlyndorst/Desktop/ChR2_Large_Box/data").sort_values(by = ["name","filename"])
-df_Control = collect_csvs("/Users/kaitlyndorst/Desktop/Control_Large_Box/data").sort_values(by = ["name","filename"])
+df_ChR2 = collect_csvs("/Users/kedorst/Desktop/csv files/ChR2_SB").sort_values(by = ["name","filename"])
+df_Control = collect_csvs("/Users/kedorst/Desktop/csv files/Control_SB").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe
 discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","Isocortex","Cerebellar","Cerebellum","Thalamus",
@@ -82,37 +82,37 @@ Right_Control = Right_Control[~Right_Control.name.str.islower()]
 
 #Merge each Left and Right
 
-ChR2 = pd.merge(Left_ChR2,Right_ChR2,how = "inner",on = ["name","filename"],suffixes=("_Left","_Right"))
-Control = pd.merge(Left_Control,Right_Control,how='inner',on = ["name","filename"],suffixes=("_Left","_Right"))
+ChR2 = pd.merge(Left_ChR2, Right_ChR2, how="inner", on=["name","filename"], suffixes=("_Left", "_Right"))
+Control = pd.merge(Left_Control, Right_Control, how='inner', on=["name","filename"], suffixes=("_Left", "_Right"))
 
 #Average the two density columns to get a bilateral reading from each animal
 #Only take the three columns "filename","name", and the bilateral averages into the new dataframe
 
-ChR2["Bilateral Density (cells/mm^3)"] = ChR2[["density (cells/mm^3)_Left","density (cells/mm^3)_Right"]].mean(axis = 1)
-ChR2 = ChR2[["filename","name","acronym_Left","Bilateral Density (cells/mm^3)"]]
+ChR2["Bilateral Density (cells/mm^3)"] = ChR2[["density (cells/mm^3)_Left", "density (cells/mm^3)_Right"]].mean(axis=1)
+ChR2 = ChR2[["filename", "name", "acronym_Left", "Bilateral Density (cells/mm^3)"]]
 
-Control["Bilateral Density (cells/mm^3)"] = Control[["density (cells/mm^3)_Left","density (cells/mm^3)_Right"]].mean(axis = 1)
-Control = Control[["filename","name","acronym_Left","Bilateral Density (cells/mm^3)"]]
+Control["Bilateral Density (cells/mm^3)"] = Control[["density (cells/mm^3)_Left","density (cells/mm^3)_Right"]].mean(axis=1)
+Control = Control[["filename", "name", "acronym_Left", "Bilateral Density (cells/mm^3)"]]
 
-ChR2["acronym_Left"] = ChR2["acronym_Left"].map(lambda x: x.replace('-L',""))
-Control["acronym_Left"] = Control["acronym_Left"].map(lambda x: x.replace('-L',""))
+ChR2["acronym_Left"] = ChR2["acronym_Left"].map(lambda x: x.replace('-L', ""))
+Control["acronym_Left"] = Control["acronym_Left"].map(lambda x: x.replace('-L', ""))
 
 #Use the pivot function to get the correct index that Ryan wants and just get the levels to have only the area names
-ChR2 = ChR2.pivot(index = "filename", columns = "acronym_Left", values =["Bilateral Density (cells/mm^3)"])
+ChR2 = ChR2.pivot(index="filename", columns="acronym_Left", values=["Bilateral Density (cells/mm^3)"])
 ChR2.columns = ChR2.columns.get_level_values(1)
-ChR2.reset_index(drop = True, inplace = True)
+ChR2.reset_index(drop=True, inplace=True)
 
-Control = Control.pivot(index = "filename", columns = "acronym_Left", values =["Bilateral Density (cells/mm^3)"])
+Control = Control.pivot(index="filename", columns="acronym_Left", values=["Bilateral Density (cells/mm^3)"])
 Control.columns = Control.columns.get_level_values(1)
-Control.reset_index(drop = True, inplace = True)
+Control.reset_index(drop=True, inplace=True)
 
 #Here are the ROIs by Allen Brain Group that we want to organize
-ROIs = pd.read_csv("/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ROIs.csv").loc[:,["Abbreviation","Allen Area"]]
+ROIs = pd.read_csv("/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ROIs.csv").loc[:, ["Abbreviation","Allen Area"]]
 ROIs_dict = dict(ROIs.values)
 
 #Picking the dictionary
-with open('Allen_Areas_dict.pickle','wb') as f:
-    pkl.dump(ROIs_dict,f)
+with open('Allen_Areas_dict.pickle', 'wb') as f:
+    pkl.dump(ROIs_dict, f)
 
 #Do not need any of this fluff, this is only for organizing the final .csv files based on Allen Anatomy
 '''
@@ -124,5 +124,5 @@ ChR2 = ChR2[cols]
 Control = Control[cols]'''
 
 #Turn the final ChR2 and Control dfs into .csv files to send to Ryan
-ChR2.to_csv("/Users/kaitlyndorst/Desktop/ChR2_Large_Box/ChR2_Large_Box.csv", index = False)
-Control.to_csv("/Users/kaitlyndorst/Desktop/Control_Small_Box/Control_Small_Box.csv", index = False)
+ChR2.to_csv("/Users/kedorst/Desktop/ChR2_Small_Box.csv", index=False)
+Control.to_csv("/Users/kedorst/Desktop/Control_Small_Box.csv", index=False)
