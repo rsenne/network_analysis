@@ -18,7 +18,6 @@ from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
-# import network_analysis.algorithms as algorithms
 
 
 # simple function for loading our csv file
