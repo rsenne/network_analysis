@@ -235,15 +235,23 @@ def get_ordered_list(G, stat='Degree'):
     return ordered
 
 
-def cluster_attributes(graph, nodes, communities, make_df=False):
+def cluster_attributes(graph, nodes, communities, make_df=False, find_top_quantile=False):
     adj_matrix = nx.to_numpy_array(graph)  # Will create an adjacency matrix from the graph as a np.ndarray
-    node_ROIs = nodes.values()
+    node_ROIs = list(nodes.values())
     WMDz = centrality.module_degree_zscore(adj_matrix, communities, flag=0)  # calculate the WMDz
     PC = centrality.participation_coef(adj_matrix, communities, 'undirected')  # calculate the participation coefficient
+
     if make_df:
         d = {'WMDz': WMDz, "PC": PC}
         df = pd.DataFrame(d, columns=["WMDz", "PC"], index=node_ROIs)
-        return df
+        if find_top_quantile:
+            top_quant = np.where((df['WMDz'] >= df.WMDz.quantile(0.80)) & (df['PC'] >= df.PC.quantile(0.80)))[0]
+            node_ids = []
+            for node in top_quant:
+                node_ids.append(node_ROIs[node])
+            return df, node_ids
+        else:
+            return df
     else:
         return WMDz, PC
 
@@ -263,7 +271,7 @@ def findMyHubs(node_attrs_df):
     Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] >= Results.Clustering_Coefficient.quantile(.80)),
+    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
                                     Results['Hub_Score'] + 1,
                                     Results['Hub_Score'])
     Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),

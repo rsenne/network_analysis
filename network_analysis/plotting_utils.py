@@ -103,6 +103,7 @@ def graph_network(G, color_list, pos_dict):
 def DG_subgraph(cluster_ids, nodes, G, pos_dict, color_list):
     DG_tuple = [clust for clust in cluster_ids if 24 in clust]
     DG_cluster = [node for tup in DG_tuple for node in tup]
+    DG_cluster.sort()
 
     vals = []
     for node in DG_cluster:

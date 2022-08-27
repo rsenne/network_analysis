@@ -111,7 +111,7 @@ def louvain(graph, nodes, n_iters):
     node_nums = {value: key for key, value in nodes.items()}
     graph = nx.relabel_nodes(graph, node_nums)
     # Use different iterations instead of resolutions and average the 1000 Q values
-    louvain_iters = [nx_comm.louvain_communities(graph, resolution=1.0, seed=random_state) for i in range(n_iters)]
+    louvain_iters = [nx_comm.louvain_communities(graph, resolution=1.0, seed=np.random) for i in range(n_iters)]
     lou_mod = []
     for i in louvain_iters:
         mods = nx.algorithms.community.modularity(graph, i, weight='weight', resolution=1)
