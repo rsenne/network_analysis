@@ -1,16 +1,22 @@
 #Unpickle the ROI dictionary
 import pickle as pkl
 from random import shuffle
-with open('/Users/kedorst/Documents/GitHub/network_analysis/Allen_Areas_dict.pickle','rb') as f:
+with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
 
 #Then get that data
-ChR2_raw_data, ChR2_nodes = loadData('/Users/kedorst/Documents/GitHub/network_analysis/csv_files/ChR2_Small_Box.csv')
-Control_raw_data, Control_nodes = loadData('/Users/kedorst/Documents/GitHub/network_analysis/csv_files/Control_Small_Box.csv')
+ChR2_raw_data, ChR2_nodes = loadData('/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ChR2_Small_Box.csv')
+Control_raw_data, Control_nodes = loadData('/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/Control_Small_Box.csv')
 
-#Function to compare densities of the raw data using a Kruskal-Wallis H test
+#Function to compare densities of the raw data only within areas across two conditions using a ttest
 df_stats = comp_conds(ChR2_nodes, ChR2_raw_data, Control_raw_data)
+
+'''For comparing densities across conditions AND environments and to test for interactions, use a two-way ANOVA
+
+
+
+'''
 
 #Get the correlation and adjusted p values for data_ChR2 and data_Control
 ChR2_rVal, ChR2_p_Val = corrMatrix(ChR2_raw_data, corr_type="Spearman")

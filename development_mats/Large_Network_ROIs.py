@@ -20,7 +20,7 @@ def collect_csvs(filepath):
     return df
 
 #Get each df for Control and ChR2 group and sort them by name
-df_ChR2 = collect_csvs("/Users/kedorst/Desktop/csv files/ChR2_SB").sort_values(by = ["name","filename"])
+df_ChR2 = collect_csvs("/Users/kaitlyndorst/Documents/Github/csv files/ChR2_SB").sort_values(by = ["name","filename"])
 df_Control = collect_csvs("/Users/kedorst/Desktop/csv files/Control_SB").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe

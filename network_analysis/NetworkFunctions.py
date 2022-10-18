@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import scipy.special as sc
 import scipy.stats
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
 import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
@@ -36,23 +38,46 @@ def loadData(data):
 
 def comp_conds(nodes, data1, data2):
     nodes = list(nodes.values())
-    H_stat = []
+    t_stat = []
     p_val = []
     for node in nodes:
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
 
 
-        H, p = scipy.stats.kruskal(array1, array2)
+        t, p = scipy.stats.ttest_ind(array1, array2)
 
-        H_stat.append(H)
+        t_stat.append(t)
         p_val.append(p)
 
-    d = {"H statistic": H_stat, "p value": p_val}
-    df_stats = pd.DataFrame(d, columns=["H statistic", "p value"], index=nodes)
+    d = {"t statistic": t_stat, "p value": p_val}
+    df_stats = pd.DataFrame(d, columns=["t statistic", "p value"], index=nodes)
     df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
 
     return df_stats
+
+
+def two_way(nodes, chr2_small, control_small, chr2_large, control_large):
+    nodes = list(nodes.values())
+    #Would have to run test for each node in the dataset
+    stats_df = pd.DataFrame(columns=['sum_sq', 'df', 'F', 'PR(>F)', 'Node'])
+    for node in nodes:
+        ChR2_SB = np.array(chr2_small[node])
+        Cntrl_SB = np.array(control_small[node])
+        ChR2_LB = np.array(chr2_large[node])
+        Cntrl_LB = np.array(control_large[node])
+
+        node_data = np.concatenate((ChR2_SB, Cntrl_SB, ChR2_LB, Cntrl_LB), axis=None)
+        df_node = pd.DataFrame({'Virus': np.tile(np.repeat(['ChR2', 'Control'], 8), 2)
+                                'Environment': np.repeat(['Small', 'Large'], 16)
+                                'Density': node_data})
+        #Make the model
+        model_node = ols('Density ~ C(Virus) + C(Environment) + C(Virus):C(Environment)', data=df_node).fit()
+        node_results = sm.stats.anova_lm(model_node, typ=2)
+        node_results['Node'] = np.repeat(node,4)
+        pd.concat((stats_df,node_results), axis=0, ignore_index=False)
+
+    #Post-hoc multiple comparisons
 
 
 # correlate our c-Fos counts between brain regions, df for data
