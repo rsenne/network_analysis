@@ -36,28 +36,27 @@ def loadData(data):
     return data, nodes
 
 
-def comp_conds(nodes, data1, data2):
+def mult_mann_whit_rank(nodes, data1, data2):
     nodes = list(nodes.values())
-    t_stat = []
+    u_stat = []
     p_val = []
     for node in nodes:
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
 
+        u, p = scipy.stats.mannwhitneyu(array1, array2)
 
-        t, p = scipy.stats.ttest_ind(array1, array2)
-
-        t_stat.append(t)
+        u_stat.append(u)
         p_val.append(p)
 
-    d = {"t statistic": t_stat, "p value": p_val}
-    df_stats = pd.DataFrame(d, columns=["t statistic", "p value"], index=nodes)
+    d = {"u statistic": u_stat, "p value": p_val}
+    df_stats = pd.DataFrame(d, columns=["u statistic", "p value"], index=nodes)
     df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
 
     return df_stats
 
 
-def two_way(nodes, chr2_small, control_small, chr2_large, control_large):
+'''def two_way(nodes, chr2_small, control_small, chr2_large, control_large):
     nodes = list(nodes.values())
     #Would have to run test for each node in the dataset
     stats_df = pd.DataFrame(columns=['sum_sq', 'df', 'F', 'PR(>F)', 'Node'])
@@ -68,14 +67,14 @@ def two_way(nodes, chr2_small, control_small, chr2_large, control_large):
         Cntrl_LB = np.array(control_large[node])
 
         node_data = np.concatenate((ChR2_SB, Cntrl_SB, ChR2_LB, Cntrl_LB), axis=None)
-        df_node = pd.DataFrame({'Virus': np.tile(np.repeat(['ChR2', 'Control'], 8), 2)
-                                'Environment': np.repeat(['Small', 'Large'], 16)
+        df_node = pd.DataFrame({'Virus': np.tile(np.repeat(['ChR2', 'Control'], 8), 2),
+                                'Environment': np.repeat(['Small', 'Large'], 16),
                                 'Density': node_data})
         #Make the model
         model_node = ols('Density ~ C(Virus) + C(Environment) + C(Virus):C(Environment)', data=df_node).fit()
         node_results = sm.stats.anova_lm(model_node, typ=2)
         node_results['Node'] = np.repeat(node,4)
-        pd.concat((stats_df,node_results), axis=0, ignore_index=False)
+        pd.concat((stats_df,node_results), axis=0, ignore_index=False)'''
 
     #Post-hoc multiple comparisons
 
@@ -165,7 +164,7 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
 
                 # Plot the newly generated Allen ROI correlation maitrx
                 plt.figure()
-                sns.clustermap(allen_pandas, cmap='viridis', row_colors=allen_colors, col_colors=allen_colors,
+                sns.clustermap(allen_pandas, cmap='Spectral_r', vmin=0.7, vmax=1.0, row_colors=allen_colors, col_colors=allen_colors,
                                row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
                                figsize=(10, 10), cbar_pos=(0.1, 0.15, .02, .4), cbar_kws={'label': 'Spearman Value'})
                 plt.legend(
@@ -174,8 +173,8 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
                     bbox_to_anchor=(5.0, 1.6))
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10, 10),
-                       cbar_pos=(.9, .9, .02, .10))
+        #sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10, 10),
+                       #cbar_pos=(.9, .9, .02, .10))
         return threshold_matrix,pandas_matrix
     else:
         return threshold_matrix

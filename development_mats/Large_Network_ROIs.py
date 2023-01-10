@@ -20,8 +20,8 @@ def collect_csvs(filepath):
     return df
 
 #Get each df for Control and ChR2 group and sort them by name
-df_ChR2 = collect_csvs("/Users/kaitlyndorst/Documents/Github/csv files/ChR2_SB").sort_values(by = ["name","filename"])
-df_Control = collect_csvs("/Users/kedorst/Desktop/csv files/Control_SB").sort_values(by = ["name","filename"])
+df_ChR2 = collect_csvs("/Users/kedorst/Desktop/csv_files/ChR2_LB/LCT_data").sort_values(by = ["name","filename"])
+df_Control = collect_csvs("/Users/kedorst/Desktop/csv_files/Control_LB/LCT_data").sort_values(by = ["name","filename"])
 
 #Create a hard-code list of terms that can drop entries in the dataframe
 discard = ["background","layer","/Layer","5","6","Basic","Cerebrum","Cerebral","Isocortex","Cerebellar","Cerebellum","Thalamus",
@@ -107,7 +107,7 @@ Control.columns = Control.columns.get_level_values(1)
 Control.reset_index(drop=True, inplace=True)
 
 #Here are the ROIs by Allen Brain Group that we want to organize
-ROIs = pd.read_csv("/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ROIs.csv").loc[:, ["Abbreviation","Allen Area"]]
+ROIs = pd.read_csv("/Users/kedorst/Documents/GitHub/network_analysis/csv_files/ROIs.csv").loc[:, ["Abbreviation","Allen Area"]]
 ROIs_dict = dict(ROIs.values)
 
 #Picking the dictionary

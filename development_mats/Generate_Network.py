@@ -1,22 +1,16 @@
 #Unpickle the ROI dictionary
 import pickle as pkl
 from random import shuffle
-with open('/Users/kaitlyndorst/Documents/GitHub/networkx/Allen_Areas_dict.pickle','rb') as f:
+with open('/Users/kedorst/Documents/GitHub/network_analysis/Allen_Areas_dict.pickle','rb') as f:
     ROIs = pkl.load(f)
 Allen_Groups = list(ROIs.values())
 
 #Then get that data
-ChR2_raw_data, ChR2_nodes = loadData('/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/ChR2_Small_Box.csv')
-Control_raw_data, Control_nodes = loadData('/Users/kaitlyndorst/Documents/GitHub/networkx/csv_files/Control_Small_Box.csv')
+ChR2_raw_data, ChR2_nodes = loadData('/Users/kedorst/Documents/GitHub/network_analysis/csv_files/ChR2_Small_Box.csv')
+Control_raw_data, Control_nodes = loadData('/Users/kedorst/Documents/GitHub/network_analysis/csv_files/Control_Small_Box.csv')
 
 #Function to compare densities of the raw data only within areas across two conditions using a ttest
 df_stats = comp_conds(ChR2_nodes, ChR2_raw_data, Control_raw_data)
-
-'''For comparing densities across conditions AND environments and to test for interactions, use a two-way ANOVA
-
-
-
-'''
 
 #Get the correlation and adjusted p values for data_ChR2 and data_Control
 ChR2_rVal, ChR2_p_Val = corrMatrix(ChR2_raw_data, corr_type="Spearman")
@@ -86,9 +80,9 @@ ChR2_DGsub_Results, ChR2_DGsub_Hubs = findMyHubs(ChR2_DG_sub_attrs)
 Control_DGsub_Results, Control_DGsub_Hubs = findMyHubs(Control_DG_sub_attrs)
 
 #Optional, combine all of the attributes into one final dataframe
-ChR2_final_df = combine_node_attrs(ChR2_Results, ChR2_mc_WMDz_PC_df, Allen_Groups)
-Control_final_df = combine_node_attrs(Control_Results, Control_mc_WMDz_PC_df, Allen_Groups)
+ChR2_final_df = combine_node_attrs(ChR2_whole_graph_Results, ChR2_lou_WMDz_PC_df, Allen_Groups)
+Control_final_df = combine_node_attrs(Control_whole_graph_Results, Control_lou_WMDz_PC_df, Allen_Groups)
 
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
-node_attrs_to_csv(ChR2_final_df, '/Users/kaitlyndorst/Desktop/ChR2_Small_Box', 'ChR2_nodes_Small_Box')
-node_attrs_to_csv(Control_final_df, '/Users/kaitlyndorst/Desktop/Control_Small_Box', 'Control_nodes_Small_Box')
+node_attrs_to_csv(ChR2_final_df, '/Users/kedorst/Desktop/ChR2_Large_Box', 'ChR2_nodes_Large_Box')
+node_attrs_to_csv(Control_final_df, '/Users/kedorst/Desktop/Control_Large_Box', 'Control_nodes_Large_Box')

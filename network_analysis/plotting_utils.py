@@ -131,7 +131,7 @@ def DG_subgraph(cluster_ids, nodes, G, pos_dict, color_list):
     fig.tight_layout()
     plt.axis('off')
     plt.show()
-    return DG_graph
+    return fig
 
 
 def plot_degree_distribution(G):
