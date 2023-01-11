@@ -44,11 +44,10 @@ def mult_ttest(nodes, data1, data2):
     for node in nodes:
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
-
         # Perform a KS test on each set to test for normality
         data1_ks = kstest(array1, 'norm')
         data2_ks = kstest(array2, 'norm')
-
+        # Run a non-parametric ttest for non-gaussian data and a ttest for normalized data
         if data1_ks[1] < 0.05 or data2_ks[1] < 0.05:
             u, p = scipy.stats.mannwhitneyu(array1, array2)
             stat.append(u)
@@ -57,11 +56,10 @@ def mult_ttest(nodes, data1, data2):
             t, p = scipy.stats.ttest_ind(array1, array2)
             stat.append(t)
             p_val.append(p)
-
+    # Compile all of the tests into a df
     d = {"test statistic": stat, "p value": p_val}
     df_stats = pd.DataFrame(d, columns=["test statistic", "p value"], index=nodes)
     df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
-
     return df_stats
 
 
