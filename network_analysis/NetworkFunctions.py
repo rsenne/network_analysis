@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import scipy.special as sc
 import scipy.stats
+from scipy.stats import kstest
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import seaborn as sns
@@ -36,21 +37,29 @@ def loadData(data):
     return data, nodes
 
 
-def mult_mann_whit_rank(nodes, data1, data2):
+def mult_ttest(nodes, data1, data2):
     nodes = list(nodes.values())
-    u_stat = []
+    stat = []
     p_val = []
     for node in nodes:
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
 
-        u, p = scipy.stats.mannwhitneyu(array1, array2)
+        # Perform a KS test on each set to test for normality
+        data1_ks = kstest(array1, 'norm')
+        data2_ks = kstest(array2, 'norm')
 
-        u_stat.append(u)
-        p_val.append(p)
+        if data1_ks[1] < 0.05 or data2_ks[1] < 0.05:
+            u, p = scipy.stats.mannwhitneyu(array1, array2)
+            stat.append(u)
+            p_val.append(p)
+        else:
+            t, p = scipy.stats.ttest_ind(array1, array2)
+            stat.append(t)
+            p_val.append(p)
 
-    d = {"u statistic": u_stat, "p value": p_val}
-    df_stats = pd.DataFrame(d, columns=["u statistic", "p value"], index=nodes)
+    d = {"test statistic": stat, "p value": p_val}
+    df_stats = pd.DataFrame(d, columns=["test statistic", "p value"], index=nodes)
     df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
 
     return df_stats

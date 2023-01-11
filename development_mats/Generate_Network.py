@@ -84,5 +84,5 @@ ChR2_final_df = combine_node_attrs(ChR2_whole_graph_Results, ChR2_lou_WMDz_PC_df
 Control_final_df = combine_node_attrs(Control_whole_graph_Results, Control_lou_WMDz_PC_df, Allen_Groups)
 
 #If you wish to export all of your data to .csv files, run the node_attrs_to_csv function
-node_attrs_to_csv(ChR2_final_df, '/Users/kedorst/Desktop/ChR2_Large_Box', 'ChR2_nodes_Large_Box')
-node_attrs_to_csv(Control_final_df, '/Users/kedorst/Desktop/Control_Large_Box', 'Control_nodes_Large_Box')
+node_attrs_to_csv(ChR2_final_df, '/Users/kedorst/Desktop', 'ChR2_nodes_Large_Box')
+node_attrs_to_csv(Control_final_df, '/Users/kedorst/Desktop', 'Control_nodes_Large_Box')
