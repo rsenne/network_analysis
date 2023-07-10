@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import scipy.special as sc
 import scipy.stats
-import seaborn as sns
+# import seaborn as sns
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
@@ -270,7 +270,7 @@ def findMyHubs(node_attrs_df):
                                     Results['Hub_Score'] + 1, Results['Hub_Score'])
 
     NonHubs = Results[
-        (Results['Hub_Score'] < 2)].index  # create an index of rois with a score of less than 2 in hubness
+        (Results['Hub_Score'] < 3)].index  # create an index of rois with a score of less than 2 in hubness
 
     Hubs = Results.drop(NonHubs).sort_values('Hub_Score',
                                              ascending=False)  # create a new frame with only the important nodes/ take out rois in the prior index

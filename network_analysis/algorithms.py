@@ -119,7 +119,7 @@ def louvain(graph, nodes, n_iters):
         mods = nx.algorithms.community.modularity(graph, i, weight='weight', resolution=1)
         lou_mod.append(mods)
 
-    # Combine all of the results into a dataframe
+    # Combine all the results into a dataframe
     d = {'Louvain_Results': louvain_iters, 'Modularity': lou_mod}
     df = pd.DataFrame(d, columns=['Louvain_Results', 'Modularity'])
     column = df['Modularity']
@@ -147,7 +147,7 @@ def louvain(graph, nodes, n_iters):
                 pass
     cluster_vector_lou = np.array(cluster_vector_lou)
     vector_length = len(nodes.keys())
-    cluster_vector_lou = np.reshape(cluster_vector_lou,(vector_length, 1))
+    cluster_vector_lou = np.reshape(cluster_vector_lou, (vector_length, 1))
 
     return max_mod_lou_comm, lou_max_mod, lou_mod_mean, cluster_vector_lou
 
