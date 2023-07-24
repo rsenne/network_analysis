@@ -1,19 +1,11 @@
-"""
-this is a set of functions necessary for the creation of undirected c-Fos networks.
-this project was inspired and adapted from work done by Drs. Cesar Coelho, Anne Wheeler, and Gisella Vetere.
-we thank them for their kind support throughout this process
-"""
-# author:ryan senne/ramirez group
-
 # import necessary libraries
-
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.special as sc
 import scipy.stats
-# import seaborn as sns
+from scipy import stats
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
 from bct.algorithms import centrality
@@ -21,7 +13,7 @@ from scipy.spatial.distance import cdist
 
 
 # simple function for loading our csv file
-def loadData(data):
+def load_data(data):
     """
     :param data:
     :return:
@@ -42,7 +34,6 @@ def comp_conds(nodes, data1, data2):
         array1 = np.array(data1[node])
         array2 = np.array(data2[node])
 
-
         H, p = scipy.stats.kruskal(array1, array2)
 
         H_stat.append(H)
@@ -57,7 +48,7 @@ def comp_conds(nodes, data1, data2):
 
 # correlate our c-Fos counts between brain regions, df for data
 # type for correlation coefficient i.e. "pearson"
-def corrMatrix(data, corr_type='Pearson', z_trans=True):
+def corr_matrix(data, corr_type='Pearson', z_trans=True):
     if corr_type == 'Pearson':
         rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
         rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
@@ -91,14 +82,14 @@ def percentile(array, p):
 
 
 # Will generate a euclidean distance matrix from the raw data
-def euclMatrix(data):
+def eucl_matrix(data):
     data = data.T
     eucl_matrix = cdist(data, data, metric='euclidean')
     return eucl_matrix
 
 
 # using this function we will threshold based off of p-values previously calculated
-def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
+def significance_check(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
     p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
     np.fill_diagonal(p_adjusted, 0)
     p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
@@ -151,7 +142,7 @@ def significanceCheck(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=F
             pandas_matrix = pd.DataFrame(threshold_matrix)
         sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10, 10),
                        cbar_pos=(.9, .9, .02, .10))
-        return threshold_matrix,pandas_matrix
+        return threshold_matrix, pandas_matrix
     else:
         return threshold_matrix
 
@@ -168,11 +159,10 @@ def networx(corr_data, nodeLabel, drop_islands=False):
     return graph
 
 
-
 def lazy_network_generator(data):
-    df, nodes = loadData(data)
-    rVal, p, p_adjusted, alpha_corrected = corrMatrix(df)
-    threshold_matrix = significanceCheck(p_adjusted, rVal, alpha=0.001, names=nodes)
+    df, nodes = load_data(data)
+    rVal, p, p_adjusted, alpha_corrected = corr_matrix(df)
+    threshold_matrix = significance_check(p_adjusted, rVal, alpha=0.001, names=nodes)
     G, pos = networx(threshold_matrix, nodes)
     return G
 
@@ -248,7 +238,7 @@ def cluster_attributes(graph, nodes, communities, make_df=False):
         return WMDz, PC
 
 
-def findMyHubs(node_attrs_df):
+def find_my_hubs(node_attrs_df):
     Results = node_attrs_df
     # Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
     # used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
@@ -286,7 +276,7 @@ def threshold_simulation(adj_mat, a, b, x, algo='markov'):
         for thresh in thresholded_arrays:
             print(thresh)
             G, _ = networx(thresh, nodeLabel=None)
-            _, mc_clusters = algorithms.markov(G) #use the mc library that is in algorithms
+            _, mc_clusters = algorithms.markov(G)  # use the mc library that is in algorithms
             modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
     else:
         modularity = []
@@ -309,7 +299,32 @@ def node_attrs_to_csv(final_df, folder, var_name):
     return
 
 
-'''def gephiMyNetwork(threshold_matrix, path):
-    # I don't know why but gephi function only works when we make the network through here, but everything is the same.
-    Gg = nx.to_networkx_graph(threshold_matrix)
-    nx.write_gexf(Gg, path)'''
+def plot_and_compare_degree_distribution(G1, G2):
+    degree_sequence1 = sorted([d for n, d in G1.degree()], reverse=True)
+    degree_sequence2 = sorted([d for n, d in G2.degree()], reverse=True)
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(degree_sequence1, 'b-', marker='o', label="G1")
+    plt.plot(degree_sequence2, 'r-', marker='o', label="G2")
+    plt.title("Degree Rank Plot")
+    plt.ylabel("Degree")
+    plt.xlabel("Rank")
+    plt.legend()
+    plt.show()
+
+    # KS test
+    ks_stat, p_value = stats.ks_2samp(degree_sequence1, degree_sequence2)
+    print(f"KS statistic: {ks_stat}")
+    print(f"p-value: {p_value}")
+
+
+def compute_spectrum(G):
+    A = nx.adjacency_matrix(G)
+    return np.linalg.eigvals(A.todense())
+
+
+def compare_spectrum(G1, G2):
+    spectrum1 = compute_spectrum(G1)
+    spectrum2 = compute_spectrum(G2)
+    # compare using Euclidean distance
+    return np.linalg.norm(spectrum1 - spectrum2)
