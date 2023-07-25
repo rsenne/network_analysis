@@ -58,9 +58,9 @@ def get_point_cloud(k, c=1.8):
     return np.column_stack((point_cloud_x, point_cloud_y))
 
 
-def generate_circle_centers(num_circles, min_dist, radii, max_attempts=1000, max_space=250):
+def generate_circle_centers(num_circles, min_dist, radii, max_attempts=1000, max_space=500):
     """Generate random (x, y) coordinates for circle centers with given radii"""
-    space = 150
+    space = 175
 
     while space <= max_space:
         centers = [(random.uniform(0, space), random.uniform(0, space))]
@@ -82,11 +82,13 @@ def generate_circle_centers(num_circles, min_dist, radii, max_attempts=1000, max
         if len(centers) == num_circles:
             return centers  # Successfully placed all circles, return the centers
 
-        print(f"Warning: could only place {len(centers)} out of {num_circles} circles within {max_attempts} attempts. Increasing space.")
+        print(
+            f"Warning: could only place {len(centers)} out of {num_circles} circles within {max_attempts} attempts. Increasing space.")
         space += 10  # Increase space by 10 units for the next iteration
 
     # If we reach here, it means we couldn't place all circles even after increasing the space
-    print(f"Error: could not place all circles even with space={space-10}. Placed only {len(centers)} out of {num_circles}.")
+    print(
+        f"Error: could not place all circles even with space={space - 10}. Placed only {len(centers)} out of {num_circles}.")
     return centers
 
 
@@ -103,10 +105,10 @@ def get_position_data(cluster_list, node_names, shape='circular'):
 
 
 def graph_network(G, color_list, pos_dict):
-    fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots(figsize=(25, 25))
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j in G.edges]
-    node_sizes = [degree / np.mean(list(dict(G.degree()).values())) * 400 for degree in dict(G.degree()).values()]
+    node_sizes = [degree / np.mean(list(dict(G.degree()).values())) * 300 for degree in dict(G.degree()).values()]
     nx.draw(G, pos=pos_dict,
             node_color=color_list,
             node_size=node_sizes,
@@ -180,7 +182,7 @@ def plot_network_statistic(node_attr_df, statistic: str = 'Degree', cutoff: floa
     stat = node_attr_df.loc[node_attr_df[statistic] < node_attr_df[statistic].quantile(cutoff)][statistic].sort_values(
         ascending=True)
     rois = list(stat.index)
-    fig, ax = plt.subplots(figsize=(6.4*3, 4.8))
+    fig, ax = plt.subplots(figsize=(6.4 * 3, 4.8))
     ax.bar(rois, stat, color='b', linewidth=0.3, edgecolor='black')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)

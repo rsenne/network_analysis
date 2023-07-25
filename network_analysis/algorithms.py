@@ -17,6 +17,8 @@ from numpy import square
 from numpy import trace
 from numpy import amax
 from math import sqrt
+
+
 # from cock import cum
 
 
@@ -60,7 +62,7 @@ def hierarch_clust(graph, nodes, allen_groups, plot=False):
     clust_vector_hc = np.array(clust_assigns['Cluster Number'])
 
     vector_length = len(nodes.keys())
-    clust_vector_hc = np.reshape(clust_vector_hc,(vector_length,1))
+    clust_vector_hc = np.reshape(clust_vector_hc, (vector_length, 1))
 
     if plot:
         plt.figure()
@@ -105,7 +107,7 @@ def markov(graph, nodes):
     nx.set_node_attributes(graph, clust_dict)
     cluster_vector_mc = np.array(cluster_vector_mc)
     vector_length = len(nodes.keys())
-    cluster_vector_mc = np.reshape(cluster_vector_mc,(vector_length,1))
+    cluster_vector_mc = np.reshape(cluster_vector_mc, (vector_length, 1))
     return df, mc_clusters, cluster_vector_mc, node_community_dict
 
 

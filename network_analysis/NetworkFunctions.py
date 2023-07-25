@@ -4,81 +4,201 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.special as sc
-import scipy.stats
 from scipy import stats
 from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib.patches as mpatches
+from tqdm import tqdm
+import igraph as ig
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
 
-
-# simple function for loading our csv file
-def load_data(data):
-    """
-    :param data:
-    :return:
-    """
-    data = pd.read_csv(data)
-    data = data.apply(lambda x: x.fillna(x.mean()), axis=0)
-    node_names = data.columns.to_list()
-    node_number = list(item for item in range(0, len(node_names)))
-    nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
-    return data, nodes
+__all__ = ["NetworkAnalysis", "compare_spectrum", "plot_and_compare_degree_distribution"]
 
 
-def comp_conds(nodes, data1, data2):
-    nodes = list(nodes.values())
-    H_stat = []
-    p_val = []
-    for node in nodes:
-        array1 = np.array(data1[node])
-        array2 = np.array(data2[node])
+class NetworkAnalysis:
+    def __init__(self, data_path):
+        self.data_path = data_path
+        self.data = None
+        self.G = None
+        self.nodes = None
+        self.node_attrs_df = None
 
-        H, p = scipy.stats.kruskal(array1, array2)
+    def load_data(self):
+        self.data = pd.read_csv(self.data_path)
+        self.data = self.data.apply(lambda x: x.fillna(x.mean()), axis=0)
+        node_names = self.data.columns.to_list()
+        self.nodes = {i: name for i, name in enumerate(node_names)}
 
-        H_stat.append(H)
-        p_val.append(p)
+    def corr_matrix(self, data, corr_type='Pearson', z_trans=True):
+        if corr_type == 'Pearson':
+            r_val, p_val = self.corr_pearson(data)
+            p_adjusted = self.apply_correction(p_val)
+            if z_trans:
+                return np.arctanh(r_val), p_adjusted
+            else:
+                return r_val, p_adjusted
+        elif corr_type == 'Spearman':
+            r_val, p_val = stats.spearmanr(data, axis=0)
+            p_adjusted = self.apply_correction(p_val)
+            return r_val, p_adjusted
 
-    d = {"H statistic": H_stat, "p value": p_val}
-    df_stats = pd.DataFrame(d, columns=["H statistic", "p value"], index=nodes)
-    df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
+    def corr_pearson(self, data):
+        dim = data.shape[1]
+        r_val = np.zeros((dim, dim))
+        p_val = np.zeros((dim, dim))
+        for i in range(dim):
+            for j in range(i + 1, dim):
+                r, p = stats.pearsonr(data[:, i], data[:, j])
+                r_val[i, j] = r_val[j, i] = r
+                p_val[i, j] = p_val[j, i] = p
+        return r_val, p_val
 
-    return df_stats
+    def apply_correction(self, p_val):
+        mask = np.triu(np.ones(p_val.shape), 1).astype(
+            bool)  # Mask to get upper triangular matrix excluding diagonal
+        p_val_half = p_val[mask]
+        _, p_adjusted_half, _, _ = multipletests(p_val_half, alpha=0.05, method='fdr_bh')
+        p_adjusted = np.zeros_like(p_val)
+        p_adjusted[mask] = p_adjusted_half
+        p_adjusted = p_adjusted + p_adjusted.T - np.diag(np.diag(p_adjusted))  # Reconstruct full matrix
+        return p_adjusted
 
+    def percentile(self, array, p):
+        num_obs = int(np.size(array, 0) ** 2 * p)
+        crit_value = -np.sort(-array.flatten())[num_obs - 1]
+        percent_arr = np.where(array < crit_value, 0, array)
+        return percent_arr
 
-# correlate our c-Fos counts between brain regions, df for data
-# type for correlation coefficient i.e. "pearson"
-def corr_matrix(data, corr_type='Pearson', z_trans=True):
-    if corr_type == 'Pearson':
-        rVal = np.corrcoef(data, rowvar=False)  # calculate pearson coefficients
-        rVal[np.isnan(rVal)] = 0  # Will make all NaN values into zero
-        rf = rVal[np.triu_indices(rVal.shape[0], 1)]  # upper triangular matrix of data to shuffle for p-value calc
-        df = data.shape[1] - 2  # calculate degrees of freedom
-        ts = rf * rf * (df / (1 - rf * rf))  # calculate t's
-        pf = sc.betainc(0.5 * df, 0.5, df / (df + ts))  # calculate p's from beta incomplete function
-        # generate p-value matrix
-        p = np.zeros(shape=rVal.shape)
-        p[np.triu_indices(p.shape[0], 1)] = pf
-        p[np.tril_indices(p.shape[0], -1)] = p.T[np.tril_indices(p.shape[0], -1)]
-        p[np.diag_indices(p.shape[0])] = np.ones(p.shape[0])
-        # Multiple comparison of p values using Bonferroni correction
-        rejected, p_adjusted, _, alpha_corrected = multipletests(p, alpha=0.05, method='bonferroni', is_sorted=True)
-        np.fill_diagonal(rVal, 0)  # set main diagonal zero to avoid errors
-        if z_trans:
-            return np.arctanh(rVal), p, p_adjusted, alpha_corrected
+    def significance_check(self, p_adjusted, corr, alpha, threshold=0.0, include_negs=True):
+        p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)
+        np.fill_diagonal(p_adjusted, 0)
+        p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)
+        if not include_negs:
+            p_adjusted = np.where((corr < 0), 0, p_adjusted)
+        threshold_matrix = np.multiply(corr, p_adjusted)
+        threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
+        return threshold_matrix
+
+    def networkx(self, corr_data, node_label, drop_islands=False):
+        graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)
+        if node_label:
+            graph = nx.relabel_nodes(graph, node_label)
+        if drop_islands:
+            remove_node = [node for node, degree in graph.degree() if degree < 1]
+            graph.remove_nodes_from(remove_node)
+        return graph
+
+    def create_network(self, corr_type='Spearman', p_threshold=0.001, global_threshold=0.25, drop_islands=False):
+        self.load_data()
+        rvals, p = self.corr_matrix(self.data, corr_type=corr_type, z_trans=False)
+        threshold_matrix = self.significance_check(p, rvals, alpha=p_threshold, include_negs=True)
+        per_matrix = self.percentile(threshold_matrix, p=global_threshold)
+        self.G = self.networkx(threshold_matrix, self.nodes, drop_islands=drop_islands)
+
+    def compute_spectrum(self, G=None):
+        G = G or self.G
+        A = nx.adjacency_matrix(G)
+        return np.linalg.eigvals(A.todense())
+
+    def get_node_attributes(self, graph, use_distance=False, compress_to_df=False):
+        if use_distance:
+            G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in graph.edges(data='weight')}
+            nx.set_edge_attributes(graph, values=G_distance_dict, name='distance')
+        deg = nx.degree_centrality(graph)
+        between = nx.betweenness_centrality(graph)
+        eig = nx.eigenvector_centrality(graph)
+        close = nx.closeness_centrality(graph)
+        clust = nx.clustering(graph)
+        deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
+        between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
+        eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
+        close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
+        clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
+        if compress_to_df:
+            node_info = {
+                'Degree': list(deg_sort.values()),
+                'Betweenness': list(between_sort.values()),
+                'Eigenvector_Centrality': list(eig_sort.values()),
+                'Closeness': list(close_sort.values()),
+                'Clustering_Coefficient': list(clust_sort.values()),
+            }
+            ROI_index = list(graph.nodes)
+            node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
+            return node_attrs_df
         else:
-            return rVal, p, p_adjusted, alpha_corrected
-    elif corr_type == 'Spearman':
-        rVal, pVal = scipy.stats.spearmanr(data, axis=0)
-        return rVal, pVal
+            return deg_sort, between_sort, eig_sort, close_sort, clust_sort
 
+    def find_hubs(self, node_attrs_df):
+        Results = node_attrs_df
+        Results['Hub_Score'] = 0
+        Results['Hub_Score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['Hub_Score'] + 1,
+                                        Results['Hub_Score'])
+        Results['Hub_Score'] = np.where(
+            (Results['Eigenvector_Centrality'] >= Results.Eigenvector_Centrality.quantile(.80)),
+            Results['Hub_Score'] + 1,
+            Results['Hub_Score'])
+        Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)),
+                                        Results['Hub_Score'] + 1,
+                                        Results['Hub_Score'])
+        Results['Hub_Score'] = np.where(
+            (Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
+            Results['Hub_Score'] + 1,
+            Results['Hub_Score'])
+        Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),
+                                        Results['Hub_Score'] + 1, Results['Hub_Score'])
 
-# Function that will threshold R-vals on the top percentile
-def percentile(array, p):
-    num_obs = int(np.size(array, 0) ** 2 * p)
-    crit_value = -np.sort(-array.flatten())[num_obs - 1]
-    percent_arr = np.where(array < crit_value, 0, array)
-    return percent_arr
+        NonHubs = Results[
+            (Results['Hub_Score'] < 3)].index
+
+        Hubs = Results.drop(NonHubs).sort_values('Hub_Score', ascending=False)
+        return Results, Hubs
+
+    def threshold_simulation(self, adj_mat, a, b, x, algo='markov'):
+        percentiles = [i for i in np.linspace(a, b, x)]
+        thresholded_arrays = [self.percentile(adj_mat, p) for p in percentiles]
+        if algo == 'markov':
+            modularity = []
+            for thresh in thresholded_arrays:
+                G, _ = self.networkx(thresh, node_label=None)
+                _, mc_clusters = nx.algorithms.community.markov(G)
+                modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
+        else:
+            modularity = []
+        return percentiles, modularity
+
+    def combine_node_attrs(self, node_attrs_df, WMDz_PC_df, Allens):
+        final_df = pd.merge(node_attrs_df, WMDz_PC_df, left_index=True, right_index=True)
+        final_df['Allen_ROI'] = Allens
+        final_df = final_df[
+            ["Allen_ROI", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
+             "WMDz",
+             "PC", "Hub_Score"]]
+        return final_df
+
+    def leiden_algorithm(self, resolution_range=(0.5, 1.75), resolution_steps=1000, n_iterations=1000):
+        if self.G is None:
+            raise ValueError("Please create the network graph using create_network method first.")
+
+        # Convert networkx graph to igraph
+        ig_graph = ig.Graph.from_networkx(self.G)
+
+        mod = []
+        resolutions = np.linspace(*resolution_range, resolution_steps)
+        for i in tqdm(resolutions):
+            partition = ig_graph.community_leiden(objective_function='CPM', weights='weight', resolution=i,
+                                                  n_iterations=n_iterations)
+            mod.append(partition.graph.modularity(partition.membership))
+        max_mod_idx = np.argmax(mod)
+        best_resolution = resolutions[max_mod_idx]
+
+        best_partition = ig_graph.community_leiden(objective_function='CPM', weights='weight',
+                                                   resolution=best_resolution, n_iterations=n_iterations)
+
+        grouped_indices = {value: [i for i, x in enumerate(best_partition.membership) if x == value] for value in
+                           set(best_partition.membership)}
+        community_assignment = [tuple(indices) for indices in grouped_indices.values()]
+
+        return best_partition, community_assignment, best_resolution
 
 
 # Will generate a euclidean distance matrix from the raw data
@@ -86,85 +206,6 @@ def eucl_matrix(data):
     data = data.T
     eucl_matrix = cdist(data, data, metric='euclidean')
     return eucl_matrix
-
-
-# using this function we will threshold based off of p-values previously calculated
-def significance_check(p_adjusted, corr, alpha, threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None):
-    p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
-    np.fill_diagonal(p_adjusted, 0)
-    p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
-    if not include_Negs:
-        p_adjusted = np.where((corr < 0), 0, p_adjusted)
-    threshold_matrix = np.multiply(corr, p_adjusted)  # remove any insignificant correlations
-    # remove correlations below threshold
-    threshold_matrix = np.where((abs(threshold_matrix) < threshold), 0, threshold_matrix)
-    # create a heatmap of correlations if wanted
-    if plot:
-        if names:
-            pandas_matrix = pd.DataFrame(threshold_matrix, index=list(names.values()), columns=list(names.values()))
-            if Anatomy:
-                # Create a sorted dictionary from the unpickled ROIs dictionary
-                sorted_dict = dict(sorted(Anatomy.items(), key=lambda item: item[1]))
-                list_for_sort = list(sorted_dict.keys())
-
-                # Reorganize the pandas_matrix to reflect the order of the Allen ROIs
-                allen_pandas = pandas_matrix[list_for_sort].loc[list_for_sort]
-
-                # Create color assignments for Allen ROIs
-                num_allens = list(sorted_dict.values())
-                allens_unique = np.unique(num_allens)
-                color_list = [color for color in sns.color_palette('Set3', n_colors=len(allens_unique))]
-                color_ref = dict(zip(map(str, allens_unique), color_list))
-                allen_colors = pd.Series(num_allens, index=allen_pandas.columns).map(color_ref)
-
-                # Create a legend for the Allen ROIs
-                cerebellum = mpatches.Patch(color=color_list[0], label='Cerebellum')
-                cort_plate = mpatches.Patch(color=color_list[1], label='Cortical Plate')
-                cort_subplate = mpatches.Patch(color=color_list[2], label='Cortical Subplate')
-                hypothalamus = mpatches.Patch(color=color_list[3], label='Hypothalamus')
-                medulla = mpatches.Patch(color=color_list[4], label='Medulla')
-                midbrain = mpatches.Patch(color=color_list[5], label='Midbrain')
-                pallidum = mpatches.Patch(color=color_list[6], label='Pallidum')
-                pons = mpatches.Patch(color=color_list[7], label='Pons')
-                striatum = mpatches.Patch(color=color_list[8], label='Striatum')
-                thalamus = mpatches.Patch(color=color_list[9], label='Thalamus')
-
-                # Plot the newly generated Allen ROI correlation maitrx
-                plt.figure()
-                sns.clustermap(allen_pandas, cmap='viridis', row_colors=allen_colors, col_colors=allen_colors,
-                               row_cluster=False, col_cluster=False, xticklabels=False, yticklabels=False,
-                               figsize=(10, 10), cbar_pos=(0.1, 0.15, .02, .4), cbar_kws={'label': 'Spearman Value'})
-                plt.legend(
-                    handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla, midbrain, pallidum, pons,
-                             striatum, thalamus],
-                    bbox_to_anchor=(5.0, 1.6))
-        else:
-            pandas_matrix = pd.DataFrame(threshold_matrix)
-        sns.clustermap(pandas_matrix, cmap='viridis', method='ward', metric='euclidean', figsize=(10, 10),
-                       cbar_pos=(.9, .9, .02, .10))
-        return threshold_matrix, pandas_matrix
-    else:
-        return threshold_matrix
-
-
-# we will create our undirected network graphs based on our matrices
-def networx(corr_data, nodeLabel, drop_islands=False):
-    graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
-    if nodeLabel:
-        graph = nx.relabel_nodes(graph, nodeLabel)
-    graph = nx.relabel_nodes(graph, nodeLabel)
-    if drop_islands:
-        remove_node = [node for node, degree in graph.degree() if degree < 1]
-        graph.remove_nodes_from(remove_node)
-    return graph
-
-
-def lazy_network_generator(data):
-    df, nodes = load_data(data)
-    rVal, p, p_adjusted, alpha_corrected = corr_matrix(df)
-    threshold_matrix = significance_check(p_adjusted, rVal, alpha=0.001, names=nodes)
-    G, pos = networx(threshold_matrix, nodes)
-    return G
 
 
 def shortest(G, threshold_matrix):
@@ -177,36 +218,6 @@ def shortest(G, threshold_matrix):
     short_dictionary = dict(zip_iterator)
 
     return short_dictionary
-
-
-def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
-    if use_distance:
-        G_distance_dict = {(e1, e2): 1 / abs(weight) for e1, e2, weight in
-                           graph.edges(data='weight')}  # creates a dict of calculted distance between all nodes
-        nx.set_edge_attributes(graph, values=G_distance_dict, name='distance')
-    deg = nx.degree_centrality(graph)
-    between = nx.betweenness_centrality(graph)
-    eig = nx.eigenvector_centrality(graph)
-    close = nx.closeness_centrality(graph)
-    clust = nx.clustering(graph)
-    deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
-    between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
-    eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
-    close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
-    clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
-    if compress_to_df:
-        node_info = {
-            'Degree': list(deg_sort.values()),
-            'Betweenness': list(between_sort.values()),
-            'Eigenvector_Centrality': list(eig_sort.values()),
-            'Closeness': list(close_sort.values()),
-            'Clustering_Coefficient': list(clust_sort.values()),
-        }
-        ROI_index = list(graph.nodes)
-        node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
-        return node_attrs_df
-    else:
-        return deg_sort, between_sort, eig_sort, close_sort, clust_sort
 
 
 def get_ordered_list(G, stat='Degree'):
@@ -238,62 +249,6 @@ def cluster_attributes(graph, nodes, communities, make_df=False):
         return WMDz, PC
 
 
-def find_my_hubs(node_attrs_df):
-    Results = node_attrs_df
-    # Van den Huevel(2010) - https://www.jneurosci.org/content/30/47/15915
-    # used the top or bottom quartiles to determine the hubness of all nodes so here we calculate that.
-    # For each significant measure an ROI has add one in the score column, a score >= 2 is considered a hub node.
-
-    Results['Hub_Score'] = 0
-    Results['Hub_Score'] = np.where((Results['Degree'] >= Results.Degree.quantile(0.80)), Results['Hub_Score'] + 1,
-                                    Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Eigenvector_Centrality'] >= Results.Eigenvector_Centrality.quantile(.80)),
-                                    Results['Hub_Score'] + 1,
-                                    Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Betweenness'] >= Results.Betweenness.quantile(0.80)),
-                                    Results['Hub_Score'] + 1,
-                                    Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Clustering_Coefficient'] <= Results.Clustering_Coefficient.quantile(.20)),
-                                    Results['Hub_Score'] + 1,
-                                    Results['Hub_Score'])
-    Results['Hub_Score'] = np.where((Results['Closeness'] >= Results.Closeness.quantile(.80)),
-                                    Results['Hub_Score'] + 1, Results['Hub_Score'])
-
-    NonHubs = Results[
-        (Results['Hub_Score'] < 3)].index  # create an index of rois with a score of less than 2 in hubness
-
-    Hubs = Results.drop(NonHubs).sort_values('Hub_Score',
-                                             ascending=False)  # create a new frame with only the important nodes/ take out rois in the prior index
-
-    return Results, Hubs
-
-
-def threshold_simulation(adj_mat, a, b, x, algo='markov'):
-    percentiles = [i for i in np.linspace(a, b, x)]
-    thresholded_arrays = [percentile(adj_mat, p) for p in percentiles]
-    if algo == 'markov':
-        modularity = []
-        for thresh in thresholded_arrays:
-            print(thresh)
-            G, _ = networx(thresh, nodeLabel=None)
-            _, mc_clusters = algorithms.markov(G)  # use the mc library that is in algorithms
-            modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
-    else:
-        modularity = []
-    return percentiles, modularity
-
-
-def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens):
-    final_df = pd.merge(node_attrs_df, WMDz_PC_df, left_index=True,
-                        right_index=True)  # You need the two dfs from Results & Hubs functions
-    final_df['Allen_ROI'] = Allens  # This is the list that comes from the unpickled Allen_ROI_dict
-    # reorder all of the columns to your liking
-    final_df = final_df[
-        ["Allen_ROI", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
-         "WMDz", "PC", "Hub_Score"]]
-    return final_df
-
-
 def node_attrs_to_csv(final_df, folder, var_name):
     final_df.to_csv(folder + '/' + var_name + '.csv')
     return
@@ -318,13 +273,42 @@ def plot_and_compare_degree_distribution(G1, G2):
     print(f"p-value: {p_value}")
 
 
-def compute_spectrum(G):
-    A = nx.adjacency_matrix(G)
-    return np.linalg.eigvals(A.todense())
-
-
 def compare_spectrum(G1, G2):
-    spectrum1 = compute_spectrum(G1)
-    spectrum2 = compute_spectrum(G2)
-    # compare using Euclidean distance
+    spectrum1 = G1.compute_spectrum()
+    spectrum2 = G2.compute_spectrum()
     return np.linalg.norm(spectrum1 - spectrum2)
+
+
+def corr_permutation_ttest(a, b, niters=1000, plot=False):
+    upper_idxs = np.triu_indices_from(a, 1)
+    upper_a = a[upper_idxs]
+    upper_b = b[upper_idxs]
+    mean_a = np.mean(upper_a)
+    mean_b = np.mean(upper_b)
+    test_statistic = np.abs(mean_a - mean_b)
+
+    combined = np.concatenate([upper_a, upper_b])
+    num_a = len(upper_a)
+    num_b = len(upper_b)
+    perm_diffs = np.zeros(niters)
+
+    for i in range(niters):
+        permuted = np.random.permutation(combined)
+        perm_a = permuted[:num_a]
+        perm_b = permuted[num_a:num_a + num_b]
+        perm_diffs[i] = np.abs(np.mean(perm_a) - np.mean(perm_b))
+
+    # p-value is proportion of permuted differences greater than or equal to observed difference
+    p_value = np.mean(perm_diffs >= test_statistic)
+
+    # Plotting
+    if plot:
+        plt.hist(perm_diffs, bins=30, alpha=0.7, label='Null distribution')
+        plt.axvline(test_statistic, color='red', linestyle='dashed', linewidth=2, label='Observed statistic')
+        plt.title("Null distribution vs observed statistic")
+        plt.xlabel("Difference in means")
+        plt.ylabel("Frequency")
+        plt.legend()
+        plt.show()
+
+    return test_statistic, p_value
