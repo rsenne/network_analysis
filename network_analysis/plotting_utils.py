@@ -17,10 +17,18 @@ def grab_color_attributes(cluster_list, node_dict):
 
 def get_allen_colors(allen_rois):
     allen_df = pd.read_csv(allen_rois)
+<<<<<<< Updated upstream
     allen_list = list(set(allen_df['Allen Group Name']))
     allen_colors = [color for color in sns.color_palette('colorblind', len(allen_list))]
     allen_color_dict = {group:color for group, color in zip(allen_list, allen_colors)}
     allen_dict = {abbrev:name for abbrev,name in zip(allen_df['Abbreviation'], allen_df['Allen Group Name'])}
+=======
+    allen_list = list(set(allen_df['Allen Area']))
+    allen_list_alphabetical = sorted(allen_list)
+    allen_colors = [color for color in sns.color_palette('Paired', len(allen_list_alphabetical))]
+    allen_color_dict = {group:color for group, color in zip(allen_list_alphabetical, allen_colors)}
+    allen_dict = {abbrev:name for abbrev,name in zip(allen_df['Abbreviation'], allen_df['Allen Area'])}
+>>>>>>> Stashed changes
     color_list = []
     for area in allen_dict:
         color_list.append(allen_color_dict[allen_dict[area]])
@@ -67,7 +75,11 @@ def get_position_data(cluster_list, node_names):
     return pos_dict
 
 
+<<<<<<< Updated upstream
 def graph_network(G, color_list, pos_dict, title, filepath = '', save = False):
+=======
+def graph_network(G, color_list, pos_dict, title ='', results_folder ='', save = False):
+>>>>>>> Stashed changes
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j, _ in G.edges(data=True)]
     deg = G.degree()
@@ -81,10 +93,15 @@ def graph_network(G, color_list, pos_dict, title, filepath = '', save = False):
     plt.title(title, fontsize = 20)
     fig.tight_layout()
     plt.show()
+<<<<<<< Updated upstream
     plt.axis('off')
     if save:
         fig.savefig(os.path.join(filepath, title + \
                                  '.png'), dpi=300)
+=======
+    if save:
+        fig.savefig(os.path.join(results_folder, title +'.png'))
+>>>>>>> Stashed changes
     return
 
 def plot_efficiency_percentile(efficiency, colors, results_folder = '', save = False):
@@ -115,6 +132,54 @@ def create_custom_legend(colors):
     colors : dict
         Dictionary in which the key is the string you want to use in the legend and the value is the color you want to assing.
 
+<<<<<<< Updated upstream
+=======
+def plot_network_statistic(a):
+    return
+
+def plot_efficiency_percentile(efficiency, colors_exp, results_folder = '', save = False):
+    fig, ax = plt.subplots(2, figsize = (20,16),sharex = True)
+    for e in efficiency.keys():
+        ax[0].plot(efficiency[e]['global_efficiency'][1], efficiency[e]['global_efficiency'][0], color = colors_exp[e],linewidth=3)
+        ax[0].set_title('Global Efficiency')
+        ax[1].plot(efficiency[e]['local_efficiency'][1], efficiency[e]['local_efficiency'][0], color = colors_exp[e],linewidth=3)
+        ax[1].set_title('Local Efficiency')
+        ax[1].set_xlabel('Percentile')
+        #start, end = ax[1].get_xlim()
+        #ax[1].xaxis.set_ticks(np.arange(start, end, 4.1))
+    fig.legend(handles = create_custom_legend(colors_exp), fontsize = 'x-small')
+    if save:
+        fig.savefig(os.path.join(results_folder, 'Efficiency per percentile' + \
+                                 '.png'), dpi=300)
+    return None
+
+def plot_modularity(modularity_dict, colors, results_folder = '', save = False):
+    fig = plt.figure()
+    for e,m in modularity_dict.items():
+        plt.plot(m[0], m[1], color = colors[e])
+        plt.title('Modularity')
+        plt.xlabel('Percentile')
+    fig.legend(handles = create_custom_legend(colors))
+    if save:
+        fig.savefig(os.path.join(results_folder, 'Modularity per percentile' + \
+                                 '.png'), dpi=300)
+    return None
+
+
+def color_allens(allens_unique):
+    color_list = [color for color in sns.color_palette('Set3', n_colors=len(allens_unique))]
+    color_dict = {r: color_list[i] for i, r in enumerate(allens_unique)}
+    return color_dict
+def create_custom_legend(colors):
+    """
+    Creates a personalized legend taking into account a dictionary with the strings and the colors
+
+    Parameters
+    ----------
+    colors : dict
+        Dictionary in which the key is the string you want to use in the legend and the value is the color you want to assing.
+
+>>>>>>> Stashed changes
     Returns
     -------
     handles

@@ -20,6 +20,9 @@ from scipy.spatial.distance import cdist
 <<<<<<< Updated upstream
 =======
 import network_analysis.algorithms as algorithms
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 import os
 
@@ -40,6 +43,26 @@ def loadData(data, csv = True):
     nodes = {node_number[i]: node_names[i] for i in range(len(node_number))}
     return data, nodes
 
+<<<<<<< Updated upstream
+=======
+def comp_conds(nodes, data1, data2):
+    nodes = list(nodes.values())
+    H_stat = []
+    p_val = []
+    for node in nodes:
+        array1 = np.array(data1[node])
+        array2 = np.array(data2[node])
+
+        H, p = scipy.stats.kruskal(array1, array2)
+        H_stat.append(H)
+        p_val.append(p)
+
+    d = {"H statistic": H_stat, "p value": p_val}
+    df_stats = pd.DataFrame(d, columns=["H statistic", "p value"], index=nodes)
+    df_stats["significant?"] = np.where(df_stats["p value"] < 0.05, True, False)
+
+    return df_stats
+>>>>>>> Stashed changes
 
 
 # correlate our c-Fos counts between brain regions, df for data
@@ -79,7 +102,11 @@ def euclMatrix(data):
 
 
 # using this function we will threshold based off of p-values previously calculated
+<<<<<<< Updated upstream
 def significanceCheck(p_adjusted, corr, alpha, results_folder = '', title = '', threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None, savefig =False):
+=======
+def significanceCheck(p_adjusted, corr, alpha, results_folder = '', title = '',threshold=0.0, names=None, plot=False, include_Negs=True, Anatomy=None, savefig =False):
+>>>>>>> Stashed changes
     p_adjusted = np.where((p_adjusted >= alpha), 0, p_adjusted)  # if not significant --> zero
     p_adjusted = np.where((p_adjusted != 0), 1, p_adjusted)  # if significant --> one
     if not include_Negs:
@@ -134,9 +161,14 @@ def significanceCheck(p_adjusted, corr, alpha, results_folder = '', title = '', 
                     handles=[cerebellum, cort_plate, cort_subplate, hypothalamus, medulla, midbrain, pallidum, pons,
                              striatum, thalamus],
                     bbox_to_anchor=(5.0, 1.6))
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
                 if savefig:
                     plt.savefig(os.path.join(results_folder, 'Anatomical_corr_matrix_' + title +'.png'))
+=======
+                if savefig:
+                    plt.savefig(os.path.join(results_folder, 'Anatomical_corr_matrix_' + title + '.png'))
+>>>>>>> Stashed changes
         else:
             pandas_matrix = pd.DataFrame(threshold_matrix)
 <<<<<<< Updated upstream
@@ -144,6 +176,9 @@ def significanceCheck(p_adjusted, corr, alpha, results_folder = '', title = '', 
 =======
         sns.clustermap(pandas_matrix, cmap='vlag', method='ward', metric='euclidean', figsize=(10, 10),
                        cbar_pos=(.9, .9, .02, .10))
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         if savefig:
             plt.savefig(os.path.join(results_folder, 'Euclidean_corr_matrix_' + title + '.png'))
@@ -155,12 +190,23 @@ def significanceCheck(p_adjusted, corr, alpha, results_folder = '', title = '', 
 # we will create our undirected network graphs based on our matrices
 def networx(corr_data, nodeLabel):
     graph = nx.from_numpy_array(corr_data, create_using=nx.Graph)  # use the updated corr_data to make a graph
+<<<<<<< Updated upstream
     graph = nx.relabel_nodes(graph, nodeLabel)
     # remove = [node for node, degree in graph.degree() if degree < 1]
     # graph.remove_nodes_from(remove)
     pos = nx.spring_layout(graph)
     nx.set_node_attributes(graph, pos, name='pos')
     return graph, pos
+=======
+    if nodeLabel:
+        graph = nx.relabel_nodes(graph, nodeLabel)
+    #graph = nx.relabel_nodes(graph, nodeLabel)
+    if drop_islands:
+        remove_node = [node for node, degree in graph.degree() if degree < 1]
+        graph.remove_nodes_from(remove_node)
+    return graph
+
+>>>>>>> Stashed changes
 
 def lazy_network_generator(data):
     df, nodes = loadData(data)
@@ -179,13 +225,24 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
     eig = nx.eigenvector_centrality(graph)
     close = nx.closeness_centrality(graph)
     clust = nx.clustering(graph)
+<<<<<<< Updated upstream
     comm = nx.communicability_betweenness_centrality(graph)
+=======
+    #short_avg = shortest(graph, threshold_matrix)
+    # comm = nx.communicability_betweenness_centrality(graph)
+>>>>>>> Stashed changes
     deg_sort = {area: val for area, val in sorted(deg.items(), key=lambda ele: ele[0])}
     between_sort = {area: val for area, val in sorted(between.items(), key=lambda ele: ele[0])}
     eig_sort = {area: val for area, val in sorted(eig.items(), key=lambda ele: ele[0])}
     close_sort = {area: val for area, val in sorted(close.items(), key=lambda ele: ele[0])}
     clust_sort = {area: val for area, val in sorted(clust.items(), key=lambda ele: ele[0])}
+<<<<<<< Updated upstream
     comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+=======
+    # comm_sort = {area: val for area, val in sorted(comm.items(), key=lambda ele: ele[0])}
+    #short_sort = {area: val for area, val in
+    #              sorted(short_avg.items(), key=lambda ele: ele[0])}  # included shortest path for hub detection
+>>>>>>> Stashed changes
     if compress_to_df:
         node_info = {
             'Degree': list(deg_sort.values()),
@@ -193,7 +250,12 @@ def grab_node_attributes(graph, use_distance=False, compress_to_df=False):
             'Eigenvector_Centrality': list(eig_sort.values()),
             'Closeness': list(close_sort.values()),
             'Clustering_Coefficient': list(clust_sort.values()),
+<<<<<<< Updated upstream
             'Communicability': list(comm_sort.values())
+=======
+            #'Avg_shortest_Path': list(short_sort.values()),
+            # 'Communicability': list(comm_sort.values())
+>>>>>>> Stashed changes
         }
         ROI_index = list(graph.nodes)
         node_attrs_df = pd.DataFrame(node_info, index=ROI_index, columns=node_info.keys())
@@ -270,30 +332,42 @@ def findMyHubs(G, ROIs_dict = None,Anatomy = None):
 
     return Results, Hubs
 
+<<<<<<< Updated upstream
 def threshold_simulation(adj_mat, a, b, x, algo='markov'):
+=======
+
+def threshold_simulation(adj_mat, nodes,  a, b, x, algo='markov'):
+>>>>>>> Stashed changes
     percentiles = [i for i in np.linspace(a, b, x)]
     thresholded_arrays = [percentile(adj_mat, p) for p in percentiles]
     if algo == 'markov':
         modularity = []
         for thresh in thresholded_arrays:
             print(thresh)
-            G, _ = networx(thresh, nodeLabel=None)
-            _, mc_clusters = algorithms.markov(G)
+            G = networx(thresh, nodeLabel=None)
+            _, mc_clusters,d = algorithms.markov(G, nodes)
             modularity.append(nx.algorithms.community.modularity(G, mc_clusters))
     else:
         modularity = []
     return percentiles, modularity
 
 
-def combine_node_attrs(node_attrs_df, WMDz_PC_df, Allens, glob_eff):
+def combine_node_attrs(node_attrs_df, WMDz_PC_df, pc, glob_eff):
     final_df = pd.merge(node_attrs_df, WMDz_PC_df, left_index=True,
                         right_index=True)  # You need the two dfs from Results & Hubs functions
-    final_df['Allen_ROI'] = Allens  # This is the list that comes from the unpickled Allen_ROI_dict
+    final_df = pd.merge(final_df, pc, left_index=True,
+                        right_index=True)  # You need the two dfs from Results & Hubs functions
+   # final_df['Allen_ROI'] = Allens  # This is the list that comes from the unpickled Allen_ROI_dict
     final_df['Delta_Global_Efficiency'] = glob_eff
     # reorder all of the columns to your liking
     final_df = final_df[
+<<<<<<< Updated upstream
         ["Allen_ROI", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
          "Communicability", "WMDz", "PC", "Delta_Global_Efficiency", "Hub_Score"]]
+=======
+        ["Complete name","Region", "Degree", "Betweenness", "Eigenvector_Centrality", "Closeness", "Clustering_Coefficient",
+         "WMDz", "PC", "Delta_Global_Efficiency", "Percentage of change", "p-value", "Hub_Score"]]
+>>>>>>> Stashed changes
     return final_df
 
 #Combine with percentage of change maybe

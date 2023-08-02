@@ -11,7 +11,18 @@ import matplotlib.pyplot as plt
 from numpy.random import random
 from statsmodels.graphics.regressionplots import abline_plot
 from sklearn.cluster import AgglomerativeClustering
+<<<<<<< Updated upstream
 import os
+
+=======
+from scipy.sparse import identity
+from scipy.sparse import diags
+from scipy.sparse import csr_matrix
+from numpy import square
+from numpy import trace
+from numpy import amax
+from math import sqrt
+>>>>>>> Stashed changes
 
 
 
@@ -70,11 +81,31 @@ def markov(graph, plot=False):
     optimal_inflation = df["Inflation"].iloc[max_index]
     mc_results = mc.run_mcl(matrix, inflation=optimal_inflation)
     mc_clusters = mc.get_clusters(mc_results)
+<<<<<<< Updated upstream
     if plot:
         numnodes = graph.number_of_nodes()
         positions = {i: (random.random() * 2 - 1, random.random() * 2 - 1) for i in range(numnodes)}
         mc.draw_graph(matrix, mc_clusters, pos=positions, node_size=100, with_labels=True, edge_color='silver')
     return df, mc_clusters
+=======
+
+    # Generate an N x 1 vector of cluster ids
+    node_nums = list(nodes.keys())
+    mc_clust_index = [i for i in range(len(mc_clusters))]
+    cluster_vector_mc = []
+    for node in node_nums:
+        for clust in mc_clust_index:
+            if node in mc_clusters[clust]:
+                cluster_vector_mc.append(clust)
+            else:
+                pass
+    clust_dict = {list(graph.nodes())[i]: {'cluster': cluster_vector_mc[i]} for i in range(len(cluster_vector_mc))}
+    nx.set_node_attributes(graph, clust_dict)
+    cluster_vector_mc = np.array(cluster_vector_mc)
+    cluster_vector_mc = np.reshape(cluster_vector_mc, (len(cluster_vector_mc), 1))
+    # plt.plot(inflation_values, modularity_values)
+    return df, mc_clusters, cluster_vector_mc
+>>>>>>> Stashed changes
 
 
 def louvain(graph,nodes):
@@ -168,3 +199,85 @@ def disruptPropagate(G, target):
         finalMat = pd.DataFrame(finalMat)
 
     return finalMat
+<<<<<<< Updated upstream
+=======
+
+
+def Similarity(A1, A2):
+    '''
+    use deltacon0 to compute similarity
+    CITATION: Danai Koutra, Joshua T. Vogelstein, Christos Faloutsos
+    DELTACON: A Principled Massive-Graph Similarity Function
+    '''
+    S1 = InverseMatrix(A1)
+    S2 = InverseMatrix(A2)
+
+    d = 0
+    for i in range(A1.shape[0]):
+        for j in range(A1.shape[0]):
+            d += (sqrt(S1[i, j]) - sqrt(S2[i, j])) ** 2
+    d = sqrt(d)
+    sim = 1 / (1 + d)
+    return sim
+
+
+def InverseMatrix(A):
+    '''
+    use Fast Belief Propagatioin
+    CITATION: Danai Koutra, Tai-You Ke, U. Kang, Duen Horng Chau, Hsing-Kuo
+    Kenneth Pao, Christos Faloutsos
+    Unifying Guilt-by-Association Approaches
+    return [I+a*D-c*A]^-1
+    '''
+    A = csr_matrix(A)
+    I = identity(A.shape[0])  # identity matirx
+    D = diags(sum(A).toarray(), [0])  # diagonal degree matrix
+
+    c1 = trace(D.toarray()) + 2
+    c2 = trace(square(D).toarray()) - 1
+    h_h = sqrt((-c1 + sqrt(c1 * c1 + 4 * c2)) / (8 * c2))
+
+    a = 4 * h_h * h_h / (1 - 4 * h_h * h_h)
+    c = 2 * h_h / (1 - 4 * h_h * h_h)
+
+    # M=I-c*A+a*D
+    # S=inv(M.toarray())
+    '''
+    compute the inverse of matrix [I+a*D-c*A]
+    use the method propose in Unifying Guilt-by-Association equation 5
+    '''
+    M = c * A - a * D
+    S = I
+    mat = M
+    power = 1
+    while amax(M.toarray()) > 10 ** (-9) and power < 7:
+        S = S + mat
+        mat = mat * M
+        power += 1
+
+    return S
+
+
+def degree_preserving_randomization(G, niter=25000):
+    G0 = G.copy()
+    i = 0
+    while i < niter:
+        r1 = np.random.randint(0, 155)
+        r2 = np.random.randint(0, 155)
+        edge1 = list(G0.edges())[r1]
+        edge2 = list(G0.edges())[r2]
+        weight1 = G0.edges()[edge1[0], edge1[1]]
+        weight2 = G0.edges()[edge2[0], edge2[1]]
+        if edge1[0] != edge2[1] and edge1[1] != edge2[0]:
+            if G0.has_edge(edge1[0], edge2[1]) or G0.has_edge(edge1[1], edge2[0]):
+                continue
+            else:
+                G0.remove_edge(edge1[0], edge1[1])
+                G0.remove_edge(edge2[0], edge2[1])
+                G0.add_edge(edge1[0], edge2[1], weight=weight1)
+                G0.add_edge(edge1[1], edge2[0], weight=weight2)
+                i += 1
+        else:
+            continue
+    return G0
+>>>>>>> Stashed changes

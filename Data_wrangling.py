@@ -20,7 +20,11 @@ import datetime
 import pickle
 import itertools
 import warnings
+<<<<<<< Updated upstream
 
+=======
+from ordered_set import OrderedSet
+>>>>>>> Stashed changes
 """
 FUNCTIONS
 """
@@ -323,7 +327,7 @@ def pickle_load(filepath, version_warning=True):
                                '.')), category=Warning)
     return variable
 
-def data_wrangling(filepath, bilateral = False, ROI = False):
+def data_wrangling(filepath, bilateral = False, ROI = False, behavior_corr = True):
     """
     Selection, sorting and data preparation of the csv from lifecanvas
     to create another dataframe or csv file for the network analyses
@@ -381,6 +385,7 @@ def data_wrangling(filepath, bilateral = False, ROI = False):
     else:
         data_deleted = {exp:df[~df.name.str.islower()] for exp,df in data.items()}
     data_prewrangled = {}
+    data_corr = []
     for exp,df in data_deleted.items():
         df = df.copy()
         if not bilateral:
@@ -395,6 +400,9 @@ def data_wrangling(filepath, bilateral = False, ROI = False):
                             axis=1)
             merged_df = merged_df[["filename","condition", "animal", "name", "acronym_Left", "Bilateral Density (cells/mm^3)"]]
             merged_df["acronym_Left"] = merged_df["acronym_Left"].map(lambda x: x.replace('-L', ""))
+            if behavior_corr:
+                merged_df.to_csv(os.path.join(filepath, str(exp) + 'data_for_correlations.csv'), index = False)
+
             merged_df = merged_df.pivot(index="filename", columns="acronym_Left", values=["Bilateral Density (cells/mm^3)"])
             merged_df.columns = merged_df.columns.get_level_values(1)
             merged_df.reset_index(drop=True, inplace=True)
@@ -435,7 +443,11 @@ def data_wrangling(filepath, bilateral = False, ROI = False):
                 data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network.csv'), index = False)
     return data_wrangled
 
+<<<<<<< Updated upstream
 def dataManager(filepath = None, results_folder = None, bilateral = False, ROI = False, processed = False, mean = False, ignore_zeros = True):
+=======
+def dataManager(filepath = None, results_folder = None, sex = None, bilateral = False, ROI = False, processed = False, mean = False, ignore_zeros = True, new= False):
+>>>>>>> Stashed changes
     """
     Function that calls all the other functions for the data wrangling, also determines the
     filepath and output_folder
@@ -476,7 +488,13 @@ def dataManager(filepath = None, results_folder = None, bilateral = False, ROI =
             datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
             'network_analysis_plots')))
         os.mkdir(results_folder)
+<<<<<<< Updated upstream
     if not processed:
+=======
+    if not processed and new:
+        data_wrangled = new_data_wrangling(filepath, sex, bilateral, ROI)
+    elif not processed:
+>>>>>>> Stashed changes
         data_wrangled = data_wrangling(filepath, bilateral, ROI)
     else:
         data_wrangled = pickle_load(filefolderManager('file')[0])
@@ -493,6 +511,26 @@ def dataManager(filepath = None, results_folder = None, bilateral = False, ROI =
     else:
         data_mean = None
     return data_wrangled, filepath, results_folder, data_mean
+<<<<<<< Updated upstream
+
+def ag_pickle(Allen_areas_dict_filepath = ''):
+    if not Allen_areas_dict_filepath:
+        ROIs = pickle_load(filefolderManager('file')[0], version_warning= False)
+    else:
+        ROIs = pickle_load(Allen_areas_dict_filepath, version_warning= False)
+    Allen_Groups = list(ROIs.values())
+    return ROIs, Allen_Groups
+
+def get_ROIs_dict(filepath):
+    files = [filepath + '/' + f for f in os.listdir(filepath) if f.endswith('ROIs_dict.pickle')]
+    if files:
+        ROIs_dict = pickle_load(files[0])
+    else:
+        ROIs_dict = None
+        print('There is not ROIs_dict.pickle in your filepath folder')
+    return ROIs_dict
+=======
+>>>>>>> Stashed changes
 
 def ag_pickle(Allen_areas_dict_filepath = ''):
     if not Allen_areas_dict_filepath:
@@ -511,9 +549,277 @@ def get_ROIs_dict(filepath):
         print('There is not ROIs_dict.pickle in your filepath folder')
     return ROIs_dict
 
-"""
-TEST
-"""
+def combine_exp(raw_data,animal_dict):
+    combined_df = []
+    for e,df in raw_data.items():
+        df['condition'] = e
+        df['name'] = animal_dict[e]
+        combined_df.append(df)
+    combined_df = pd.concat(combined_df)
+    return combined_df
 
+
+def new_data_wrangling(filepath, sex = 'F', bilateral=False, ROI=False, behavior_corr=True):
+        """
+        Selection, sorting and data preparation of the csv from lifecanvas
+        to create another dataframe or csv file for the network analyses
+
+        Parameters
+        ----------
+        filepath: string containing the path were the csv files and the ROI file are located
+        Bilateral: Boolean that defines if you can to do bilateral analyses or all combine.
+                    True: separate left and right
+                    False: mean of left and right
+        ROI: Boolean if you want to organize your data anatomically
+        Returns
+        -------
+        dict or None
+            A dictionary containing the data_wrangled dataframes per condition
+            in your experiment (keys). All the data is saved in yoyr folder as a csv
+            None is returned if any file has been selected.
+
+        """
+        files = [filepath + '/' + f for f in os.listdir(filepath) if f.endswith('.csv') or f.endswith('.pickle')]
+        data_dict = {}
+        discard = False
+        for i in files:
+            if os.path.basename(i).split('.')[0] == 'ROIs':
+                ROIs = pd.read_csv(i)
+                ROIs = ROIs.loc[:, ["Abbreviation", "Allen Group Name"]].sort_values("Allen Group Name").set_index(
+                    "Abbreviation").T
+                cols = ROIs.columns.tolist()
+                if bilateral:
+                    cols = [['-'.join([c, 'L']), '-'.join([c, 'R'])] for c in cols]
+                    cols = list(itertools.chain.from_iterable(cols))
+            elif "Discard" in os.path.basename(i).split('.')[0]:
+                discard = pickle_load(i)
+                print("Selected areas will be discarded")
+            elif "Data" in os.path.basename(i).split('.')[0] and os.path.basename(i).split('.')[1] == 'csv':
+                data_csv = pd.read_csv(i)
+                info_cols = ['id', 'name', 'acronym', 'parent_structure_id', 'depth',
+                            'volume (mm^3)']
+                discard_cols = ['AVERAGE count All Samples', 'AVERAGE density (cells/mm^3) All Samples']
+                for c in data_csv.columns:
+                    if c not in info_cols and c not in discard_cols and 'count' not in c:
+                        if c.split('_')[3] not in data_dict.keys():
+                            data_dict[c.split('_')[3]] = [data_csv[info_cols + [c]].assign(filename=lambda \
+                            x: c.split(' ')[0], condition=lambda \
+                            x: c.split(' ')[0].split('_')[3], animal=lambda x: \
+                            ''.join([sex,c.split(' ')[0].split('_')[4]])).rename(columns={c: "density (cells/mm^3)"})]
+                        else:
+                            data_dict[c.split('_')[3]].append(data_csv[info_cols + [c]].assign(filename=lambda \
+                                    x: c.split(' ')[0], condition=lambda \
+                                    x: c.split(' ')[0].split('_')[3], animal=lambda x: \
+                                ''.join([sex, c.split(' ')[0].split('_')[4]])).rename(columns={c: "density (cells/mm^3)"}))
+            else:
+                continue
+        data = {exp: pd.concat(df, ignore_index=True).loc[:,
+                     ["name", "acronym", "density (cells/mm^3)", "filename", "condition", "animal"]] \
+                for exp, df in data_dict.items()}
+        if discard:
+            data_discard = {exp: df[~df.name.str.contains('|'.join(discard))] for exp, df in data.items()}
+            data_deleted = {exp: df[~df.name.str.islower()] for exp, df in data_discard.items()}
+        else:
+            data_deleted = {exp: df[~df.name.str.islower()] for exp, df in data.items()}
+        data_prewrangled = {}
+        data_corr = []
+        for exp, df in data_deleted.items():
+            df = df.copy()
+            if not bilateral:
+                split_bool = df.name.str.contains("left")
+                left_df = df[split_bool]
+                left_df["name"] = left_df["name"].map(lambda x: x.lstrip('                left'))
+                right_df = df[~split_bool]
+                right_df["name"] = right_df["name"].map(lambda x: x.lstrip('                right'))
+                merged_df = pd.merge(left_df, right_df, how="inner", on=["name", "filename", "animal", "condition"],
+                                     suffixes=("_Left", "_Right"))
+                merged_df = merged_df.fillna(0)
+                merged_df["Bilateral Density (cells/mm^3)"] = merged_df[
+                    ["density (cells/mm^3)_Left", "density (cells/mm^3)_Right"]].mean(
+                    axis=1)
+                merged_df = merged_df[
+                    ["filename", "condition", "animal", "name", "acronym_Left", "Bilateral Density (cells/mm^3)"]]
+                merged_df["acronym_Left"] = merged_df["acronym_Left"].map(lambda x: x.replace('-L', ""))
+                if behavior_corr:
+                    merged_df.to_csv(os.path.join(filepath, str(exp) + 'data_for_correlations.csv'), index=False)
+
+                merged_df = merged_df.pivot(index="filename", columns="acronym_Left",
+                                            values=["Bilateral Density (cells/mm^3)"])
+                merged_df.columns = merged_df.columns.get_level_values(1)
+                merged_df.reset_index(drop=True, inplace=True)
+                data_prewrangled[exp] = merged_df
+            else:
+                new_df = df[["filename", "condition", "animal", "name", "acronym", "density (cells/mm^3)"]]
+                new_df = new_df.pivot(index="filename", columns="acronym", values=["density (cells/mm^3)"])
+                new_df.columns = new_df.columns.get_level_values(1)
+                new_df.reset_index(drop=True, inplace=True)
+                data_prewrangled[exp] = new_df
+        if not ROI:
+            data_wrangled = {exp: df[sorted(cols)] for exp, df in data_prewrangled.items()}
+            print("Any ROIs.csv file have been found in the folder or you don't want anatomical organization, "
+                  "data won't be reorganized accordingly")
+        else:
+            data_wrangled = {exp: df[cols] for exp, df in data_prewrangled.items()}
+        if ROI:
+            if bilateral:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network_ROI_BL.pickle'))
+            else:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network_ROI.pickle'))
+        else:
+            if bilateral:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network_BL.pickle'))
+            else:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network.pickle'))
+        for exp in data_wrangled.keys():
+            if ROI:
+                if bilateral:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network_ROI_BL.csv'),
+                                              index=False)
+                else:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network_ROI.csv'), index=False)
+
+            else:
+                if bilateral:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network_BL.csv'), index=False)
+                else:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network.csv'), index=False)
+        return data_wrangled
+
+
+def data_wrangling_ea(filepath, mice, extra_name = 'EAT', bilateral=False, ROI=False, behavior_corr=True):
+        """
+        Selection, sorting and data preparation of the csv from lifecanvas
+        to create another dataframe or csv file for the network analyses
+
+        Parameters
+        ----------
+        filepath: string containing the path were the csv files and the ROI file are located
+        Bilateral: Boolean that defines if you can to do bilateral analyses or all combine.
+                    True: separate left and right
+                    False: mean of left and right
+        ROI: Boolean if you want to organize your data anatomically
+        Returns
+        -------
+        dict or None
+            A dictionary containing the data_wrangled dataframes per condition
+            in your experiment (keys). All the data is saved in yoyr folder as a csv
+            None is returned if any file has been selected.
+
+        """
+        files = [filepath + '/' + f for f in os.listdir(filepath) if f.endswith('.csv') or f.endswith('.pickle')]
+        data_dict = {}
+        discard = False
+        for i in files:
+            if os.path.basename(i).split('.')[0] == 'ROIs':
+                ROIs = pd.read_csv(i)
+                ROIs = ROIs.loc[:, ["Abbreviation", "Allen Group Name"]].sort_values("Allen Group Name").set_index(
+                    "Abbreviation").T
+                cols = ROIs.columns.tolist()
+                if bilateral:
+                    cols = [['-'.join([c, 'L']), '-'.join([c, 'R'])] for c in cols]
+                    cols = list(itertools.chain.from_iterable(cols))
+            elif "Discard" in os.path.basename(i).split('.')[0]:
+                discard = pickle_load(i)
+                print("Selected areas will be discarded")
+            elif "Data" in os.path.basename(i).split('.')[0] and os.path.basename(i).split('.')[1] == 'csv':
+                data_csv = pd.read_csv(i)
+                info_cols = ['id', 'name', 'acronym', 'parent_structure_id', 'depth',
+                            'volume (mm^3)']
+                discard_cols = ['AVERAGE count All Samples', 'AVERAGE density (cells/mm^3) All Samples']
+                for c in data_csv.columns:
+                    if c not in info_cols and c not in discard_cols and 'count' not in c:
+                        exp = c.split('_')[2]
+                        animal_number = c.split('_')[3].split(' ')[0]
+                        animal = [name for name in mice if animal_number in name][0]
+                        if '_'.join([exp, extra_name]) not in data_dict.keys():
+                            data_dict['_'.join([exp, extra_name])] = [data_csv[info_cols + [c]].assign(filename=lambda \
+                            x: c.split(' ')[0], condition=lambda \
+                            x: exp , task=lambda \
+                            x: extra_name ,animal=lambda x: \
+                            animal).rename(columns={c: "density (cells/mm^3)"})]
+                        else:
+                            data_dict['_'.join([exp, extra_name])].append(data_csv[info_cols + [c]].assign(filename=lambda \
+                                    x: c.split(' ')[0], condition=lambda \
+                                    x: exp, animal=lambda x: \
+                                animal).rename(columns={c: "density (cells/mm^3)"}))
+            else:
+                continue
+        data = {exp: pd.concat(df, ignore_index=True).loc[:,
+                     ["name", "acronym", "density (cells/mm^3)", "filename", "condition", "animal"]] \
+                for exp, df in data_dict.items()}
+        if discard:
+            data_discard = {exp: df[~df.name.str.contains('|'.join(discard))] for exp, df in data.items()}
+            data_deleted = {exp: df[~df.name.str.islower()] for exp, df in data_discard.items()}
+        else:
+            data_deleted = {exp: df[~df.name.str.islower()] for exp, df in data.items()}
+        animal_order = {exp: OrderedSet(df.animal) for exp, df in data_deleted.items()}
+
+        data_prewrangled = {}
+        data_corr = []
+        for exp, df in data_deleted.items():
+            df = df.copy()
+            if not bilateral:
+                split_bool = df.name.str.contains("left")
+                left_df = df[split_bool]
+                left_df["name"] = left_df["name"].map(lambda x: x.lstrip('                left'))
+                right_df = df[~split_bool]
+                right_df["name"] = right_df["name"].map(lambda x: x.lstrip('                right'))
+                merged_df = pd.merge(left_df, right_df, how="inner", on=["name", "filename", "animal", "condition"],
+                                     suffixes=("_Left", "_Right"))
+                merged_df = merged_df.fillna(0)
+                merged_df["Bilateral Density (cells/mm^3)"] = merged_df[
+                    ["density (cells/mm^3)_Left", "density (cells/mm^3)_Right"]].mean(
+                    axis=1)
+                merged_df = merged_df[
+                    ["filename", "condition", "animal", "name", "acronym_Left", "Bilateral Density (cells/mm^3)"]]
+                merged_df["acronym_Left"] = merged_df["acronym_Left"].map(lambda x: x.replace('-L', ""))
+                if behavior_corr:
+                    merged_df.to_csv(os.path.join(filepath, str(exp) + 'data_for_correlations.csv'), index=False)
+
+                merged_df = merged_df.pivot(index="filename", columns="acronym_Left",
+                                            values=["Bilateral Density (cells/mm^3)"])
+                merged_df.columns = merged_df.columns.get_level_values(1)
+                merged_df.reset_index(drop=True, inplace=True)
+                data_prewrangled[exp] = merged_df
+            else:
+                new_df = df[["filename", "condition", "animal", "name", "acronym", "density (cells/mm^3)"]]
+                new_df = new_df.pivot(index="filename", columns="acronym", values=["density (cells/mm^3)"])
+                new_df.columns = new_df.columns.get_level_values(1)
+                new_df.reset_index(drop=True, inplace=True)
+                data_prewrangled[exp] = new_df
+        if not ROI:
+            data_wrangled = {exp: df[sorted(cols)] for exp, df in data_prewrangled.items()}
+            print("Any ROIs.csv file have been found in the folder or you don't want anatomical organization, "
+                  "data won't be reorganized accordingly")
+        else:
+            data_wrangled = {exp: df[cols] for exp, df in data_prewrangled.items()}
+        if ROI:
+            if bilateral:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network_ROI_BL.pickle'))
+            else:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network_ROI.pickle'))
+        else:
+            if bilateral:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network_BL.pickle'))
+            else:
+                pickle_save(data_wrangled, os.path.join(filepath, 'Data_Network.pickle'))
+        for exp in data_wrangled.keys():
+            if ROI:
+                if bilateral:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network_ROI_BL.csv'),
+                                              index=False)
+                else:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network_ROI.csv'), index=False)
+
+            else:
+                if bilateral:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network_BL.csv'), index=False)
+                else:
+                    data_wrangled[exp].to_csv(os.path.join(filepath, str(exp) + '_Large_Network.csv'), index=False)
+        return data_wrangled, animal_order
+
+<<<<<<< Updated upstream
 filepath = 'C:/Users/cds4/Desktop/Network'
 data_wrangled, filepath, results_folder, data_mean = dataManager(filepath, bilateral = False, ROI = False, processed =False, mean = True)
+=======
+>>>>>>> Stashed changes
