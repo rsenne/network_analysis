@@ -11,8 +11,9 @@ from tqdm import tqdm
 import igraph as ig
 from bct.algorithms import centrality
 from scipy.spatial.distance import cdist
+from numpy.linalg import norm
 
-__all__ = ["NetworkAnalysis", "compare_spectrum", "plot_and_compare_degree_distribution"]
+__all__ = ["NetworkAnalysis", "compare_spectrum", "plot_and_compare_degree_distribution", "corr_permutation_ttest", "distance_permutation_test"]
 
 
 class NetworkAnalysis:
@@ -22,6 +23,8 @@ class NetworkAnalysis:
         self.G = None
         self.nodes = None
         self.node_attrs_df = None
+        self.corr_mat = None
+        self.threshold_mat = None
 
     def load_data(self):
         self.data = pd.read_csv(self.data_path)
@@ -34,12 +37,15 @@ class NetworkAnalysis:
             r_val, p_val = self.corr_pearson(data)
             p_adjusted = self.apply_correction(p_val)
             if z_trans:
+                self.corr_mat = r_val
                 return np.arctanh(r_val), p_adjusted
             else:
+                self.corr_mat = r_val
                 return r_val, p_adjusted
         elif corr_type == 'Spearman':
             r_val, p_val = stats.spearmanr(data, axis=0)
             p_adjusted = self.apply_correction(p_val)
+            self.corr_mat = r_val
             return r_val, p_adjusted
 
     def corr_pearson(self, data):
@@ -312,3 +318,69 @@ def corr_permutation_ttest(a, b, niters=1000, plot=False):
         plt.show()
 
     return test_statistic, p_value
+
+
+def distance_permutation_test(a, b, niters=1000, plot=False):
+    upper_idxs = np.triu_indices_from(a, 1)
+    upper_a = a[upper_idxs]
+    upper_b = b[upper_idxs]
+    
+    test_statistic = norm(np.abs(upper_a - upper_b))
+
+    combined = np.concatenate([upper_a, upper_b])
+    num_a = len(upper_a)
+    perm_diffs = np.zeros(niters)
+
+    for i in range(niters):
+        permuted = np.random.permutation(combined)
+        perm_a = permuted[:num_a]
+        perm_b = permuted[num_a:]
+        perm_diffs[i] = norm(perm_a - perm_b)
+
+    p_value = np.mean(np.abs(perm_diffs) >= np.abs(test_statistic))
+
+    if plot:
+        plt.hist(np.abs(perm_diffs), bins=30, alpha=0.7, label='Null distribution')
+        plt.axvline(np.abs(test_statistic), color='red', linestyle='dashed', linewidth=2, label='Observed statistic')
+        plt.title("Null distribution vs observed statistic")
+        plt.xlabel("Absolute Frobenius Norm of Difference")
+        plt.ylabel("Frequency")
+        plt.legend()
+        plt.show()
+
+    return test_statistic, p_value
+
+def plot_kde_corr_matrices_upper_tri(*args, labels):
+    """ 
+    Plot KDE of correlation matrices r values from the upper triangle.
+
+    Parameters:
+    *args : Variable length argument list of correlation matrices.
+    labels (list): Labels for each matrix in the argument list.
+
+    """
+
+    # Check if the number of arguments and labels are equal
+    if not len(args) == len(labels):
+        raise ValueError("The number of arguments and labels should be equal.")
+
+    plt.figure(figsize=(10, 7))
+
+    # Loop over each correlation matrix and plot the KDE
+    for i, corr_matrix in enumerate(args):
+
+        # Get the upper triangle of the correlation matrix
+        upper_tri = corr_matrix[np.triu_indices(corr_matrix.shape[0], k = 1)]
+
+        # Flatten the upper triangular matrix and remove NaN values
+        r_values = upper_tri.flatten()
+        r_values = r_values[~np.isnan(r_values)]
+
+        # Plot the KDE
+        sns.kdeplot(r_values, label=labels[i])
+
+    plt.legend()
+    plt.xlabel("Correlation Coefficient (spearman's r)")
+    plt.ylabel('Density')
+    # plt.title('Kernel Density Estimation of Correlation Coefficients')
+    plt.show()

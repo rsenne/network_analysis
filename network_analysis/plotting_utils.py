@@ -104,8 +104,8 @@ def get_position_data(cluster_list, node_names, shape='circular'):
     return pos_dict
 
 
-def graph_network(G, color_list, pos_dict):
-    fig, ax = plt.subplots(figsize=(25, 25))
+def graph_network(G, color_list, pos_dict, figsize=(25, 25)):
+    fig, ax = plt.subplots(figsize=figsize)
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
     edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j in G.edges]
     node_sizes = [degree / np.mean(list(dict(G.degree()).values())) * 300 for degree in dict(G.degree()).values()]
