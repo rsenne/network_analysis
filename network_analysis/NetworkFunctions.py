@@ -260,21 +260,53 @@ def node_attrs_to_csv(final_df, folder, var_name):
     return
 
 
-def plot_and_compare_degree_distribution(G1, G2):
+def plot_and_compare_degree_distribution(G1, G2, label1='Graph 1', label2='Graph 2', color1="r", color2="b"):
     degree_sequence1 = sorted([d for n, d in G1.degree()], reverse=True)
     degree_sequence2 = sorted([d for n, d in G2.degree()], reverse=True)
 
     plt.figure(figsize=(10, 8))
-    plt.plot(degree_sequence1, 'b-', marker='o', label="G1")
-    plt.plot(degree_sequence2, 'r-', marker='o', label="G2")
-    plt.title("Degree Rank Plot")
+
+    plt.plot(degree_sequence1, color=color1, marker='o', label=label1)
+    plt.plot(degree_sequence2, color=color2, marker='o', label=label2)
+
     plt.ylabel("Degree")
     plt.xlabel("Rank")
     plt.legend()
-    plt.show()
 
     # KS test
     ks_stat, p_value = stats.ks_2samp(degree_sequence1, degree_sequence2)
+    
+    # Add p-value annotation
+    # Add a vertical bracket on the left of the plot to denote statistical significance
+     # Define the position and size of the bracket
+    ymin, ymax = plt.gca().get_ylim()
+    bracket_x = -3.5  # Place the bracket slightly to the left
+    ymin = min(degree_sequence1[0], degree_sequence2[0])
+    ymax = max(degree_sequence1[0], degree_sequence2[0])
+    bracket_length = 1  # Length of the horizontal parts of the bracket
+
+    # Draw the square bracket
+    plt.plot([bracket_x, bracket_x+bracket_length], [ymin, ymin], color="black", lw=1.5)  # lower horizontal line
+    plt.plot([bracket_x, bracket_x+bracket_length], [ymax, ymax], color="black", lw=1.5)  # upper horizontal line
+    plt.plot([bracket_x, bracket_x], [ymin, ymax], color="black", lw=1.5)  # vertical line
+
+    # Add p-value text to the left of the bracket
+    plt.text(-4.2, ymin + (ymax - ymin) / 2, f"p-value: {p_value:.3f}",
+             horizontalalignment='right', verticalalignment='center', rotation=90, fontsize=12)
+    
+    xlims = plt.gca().get_xlim()
+    plt.xlim(-15, xlims[1])
+    
+    #
+
+    # Adjust the x-axis limit to ensure the bracket is visible
+    # max_degree = max(max(degree_sequence1), max(degree_sequence2))
+
+    # plt.text(0.1, 1.05 * max_degree, f'p-value: {p_value:.3f}', fontsize=12)
+    # plt.axhline(xmin=0.04, xmax=0.21, y=1.025 * max_degree, color='black', linestyle='-')
+
+    plt.show()
+
     print(f"KS statistic: {ks_stat}")
     print(f"p-value: {p_value}")
 

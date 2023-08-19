@@ -45,11 +45,11 @@ def sunflower_theta(n):
     return 2 * np.pi / golden_ratio * n
 
 
-def sunflower_r(n, c=1.8):
+def sunflower_r(n, c=2.0):
     return c * (n ** 0.5)
 
 
-def get_point_cloud(k, c=1.8):
+def get_point_cloud(k, c=2.0):
     n = np.arange(1, k + 1)
     r = sunflower_r(n, c)
     theta = sunflower_theta(n)
@@ -95,22 +95,46 @@ def generate_circle_centers(num_circles, min_dist, radii, max_attempts=1000, max
 def get_position_data(cluster_list, node_names, shape='circular'):
     number_of_clusters = len(cluster_list)
     num_of_nodes = [len(node) for node in cluster_list]
-    pos = generate_circle_centers(number_of_clusters, 30, np.array(num_of_nodes) * (1 / 20))
-    point_clouds = [get_point_cloud(num, 3) + np.array(center) for num, center in zip(num_of_nodes, pos)]
+    pos = generate_circle_centers(number_of_clusters, 40, np.array(num_of_nodes) * (1 / 10))
+    point_clouds = [get_point_cloud(num, 7.5) + np.array(center) if num > 10 else get_point_cloud(num, 7) + np.array(center) for num, center in zip(num_of_nodes, pos)]
 
     pos_dict = {node_names[node]: point for idx, cluster in enumerate(cluster_list) for node, point in
                 zip(cluster, point_clouds[idx])}
 
     return pos_dict
 
+def graph_network(G, color_list, cluster_list, node_names, figsize=(25, 25)):
+    # Filter out communities with nodes of degree 0
+    cluster_list = [cluster for cluster in cluster_list if all(G.degree(node_names[node]) != 0 for node in cluster)]
+    print(cluster_list)
+    
+    # Filter node_names based on the filtered cluster_list
+    filtered_node_names = {node: node_names[node] for cluster in cluster_list for node in cluster if node in node_names}
+    
+    # Generate position data for the remaining clusters
+    pos_dict = get_position_data(cluster_list, filtered_node_names)
 
-def graph_network(G, color_list, pos_dict, figsize=(25, 25)):
     fig, ax = plt.subplots(figsize=figsize)
     negativeCorr, positiveCorr = 'lightcoral', 'gainsboro'
-    edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j in G.edges]
-    node_sizes = [degree / np.mean(list(dict(G.degree()).values())) * 300 for degree in dict(G.degree()).values()]
-    nx.draw(G, pos=pos_dict,
-            node_color=color_list,
+    
+    # Filter edges based on nodes in pos_dict
+    filtered_edges = [(i, j) for i, j in G.edges if i in pos_dict and j in pos_dict]
+    edge_colors = [negativeCorr if G[i][j]['weight'] < 0 else positiveCorr for i, j in filtered_edges]
+
+    # Filter nodes and compute node sizes
+    filtered_nodes = [node for node in G.nodes if node in pos_dict]
+
+    # Filter colors
+    reverse_node_names = {v: k for k, v in node_names.items()}
+    filtered_node_indices = [reverse_node_names[node] for node in filtered_nodes]
+    filtered_colors = [color_list[idx] for idx in filtered_node_indices]
+    # node sizes
+    node_sizes = [G.degree(node) / np.mean([G.degree(n) for n in filtered_nodes]) * 500 for node in filtered_nodes]
+    H = G.subgraph(filtered_nodes)
+    nx.draw(H, pos=pos_dict,
+            nodelist=filtered_nodes,
+            edgelist=filtered_edges,
+            node_color=filtered_colors,
             node_size=node_sizes,
             linewidths=1,
             edge_color=edge_colors,
