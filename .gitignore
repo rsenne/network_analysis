@@ -17,3 +17,8 @@ main.py
 .DS_Store
 *.pyc
 *.svg
+chr2_large_hubs.csv
+chr2_small_hubs.csv
+control_large_hubs.csv
+control_small_hubs.csv
+innate_recall_hubs.csv
